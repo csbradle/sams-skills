@@ -30,9 +30,9 @@ Custom [Claude Code](https://claude.ai/claude-code) skills for managing multi-pr
 
 ---
 
-### `/resume` — Start-of-Session Project Status
+### `/kickoff` — WTF Is Going On
 
-**When to use:** Start of every session, when switching back to a project, or anytime you ask "where are we?"
+**When to use:** Start of every session, when switching back to a project, or anytime you need a status briefing.
 
 **What it does:**
 1. Forensic scan of the entire project:
@@ -49,7 +49,7 @@ Custom [Claude Code](https://claude.ai/claude-code) skills for managing multi-pr
 4. Presents a structured status report with prioritized next steps
 5. Asks what you'd like to work on
 
-**The problem it solves:** Starting a new session and being told to rebuild a feature that already has an outstanding PR. Missing branches, forgotten work, incomplete status checks.
+**The problem it solves:** You ask "where are we?" and get told to rebuild a feature that already has an outstanding PR. Missing branches, forgotten work, incomplete status checks.
 
 **Priority rules:**
 1. Merge-ready PRs first (approved + CI green = merge it)
@@ -58,11 +58,11 @@ Custom [Claude Code](https://claude.ai/claude-code) skills for managing multi-pr
 4. Uncommitted work fourth
 5. New work last
 
-**Critical rule:** If an open PR covers work you might ask about, `/resume` will tell you "PR #X already implements this" instead of letting you rebuild it.
+**Critical rule:** If an open PR covers work you might ask about, `/kickoff` will tell you "PR #X already implements this" instead of letting you rebuild it.
 
 **Usage:**
 ```
-/resume
+/kickoff
 ```
 
 ---
@@ -77,7 +77,7 @@ git clone https://github.com/csbradle/sams-skills.git
 
 # Copy skills to your Claude Code skills directory
 cp -r sams-skills/handoff ~/.claude/skills/handoff
-cp -r sams-skills/resume ~/.claude/skills/resume
+cp -r sams-skills/kickoff ~/.claude/skills/kickoff
 ```
 
 ### Option 2: Symlink (stays updated with git pull)
@@ -86,12 +86,12 @@ cp -r sams-skills/resume ~/.claude/skills/resume
 git clone https://github.com/csbradle/sams-skills.git ~/sams-skills
 
 ln -s ~/sams-skills/handoff ~/.claude/skills/handoff
-ln -s ~/sams-skills/resume ~/.claude/skills/resume
+ln -s ~/sams-skills/kickoff ~/.claude/skills/kickoff
 ```
 
 ### Verify installation
 
-Open Claude Code and type `/handoff` or `/resume` — they should appear in the skill list.
+Open Claude Code and type `/handoff` or `/kickoff` — they should appear in the skill list.
 
 ## Requirements
 
@@ -105,8 +105,8 @@ The ideal workflow across sessions:
 
 ```
 Session 1:  ... do work ... → /handoff (end of session)
-Session 2:  /resume (start) → ... do work ... → /handoff (end)
-Session 3:  /resume (start) → ... do work ... → /handoff (end)
+Session 2:  /kickoff (start) → ... do work ... → /handoff (end)
+Session 3:  /kickoff (start) → ... do work ... → /handoff (end)
 ```
 
 Every session starts informed and ends clean. Nothing gets lost.

@@ -1,12 +1,12 @@
 ---
-name: resume
+name: kickoff
 version: 1.0.0
 description: |
-  Start-of-session project status: reads all docs, PRs, branches, recent commits,
-  and handoff docs to tell you exactly where the project stands and what to do next.
-  Catches outstanding PRs so you never rebuild work that already exists.
-  Use when: "resume", "where are we", "what's the status", "where did we leave off",
-  "what should I work on", "catch me up", "what's next", or at the start of any session.
+  Project status briefing: tells you exactly what's going on — open PRs, branches,
+  recent work, blockers — and suggests prioritized next steps. Catches outstanding
+  PRs so you never rebuild work that already exists.
+  Use when: "kickoff", "what's going on", "where are we", "what's the status",
+  "catch me up", "what's next", "wtf is going on", or at the start of any session.
 allowed-tools:
   - Bash
   - Read
@@ -18,14 +18,14 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /resume — Project Status & Session Start
+# /kickoff — WTF Is Going On
 
-One command. Know exactly where the project stands and what to do next.
+One command. Full project status briefing with prioritized next steps.
 Never rebuild work that already exists. Never miss an outstanding PR.
 
-**The problem this solves:** Starting a new Claude session and asking "where are we?"
-leads to incomplete answers — missed PRs, forgotten branches, rebuilt features.
-/resume does a forensic scan of everything and gives you the real picture.
+**The problem this solves:** You ask "where are we?" and get an incomplete answer —
+missed PRs, forgotten branches, rebuilt features. /kickoff does a forensic scan
+of everything and tells you what's actually going on.
 
 ---
 
