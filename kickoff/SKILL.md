@@ -1,6 +1,6 @@
 ---
 name: kickoff
-version: 2.0.0
+version: 2.1.0
 description: |
   Product-level status briefing: plain-language summary of where the project stands,
   what phase we're in, what's left to do, and what to work on next. Written for
@@ -124,7 +124,7 @@ echo "=== STASHED WORK ==="
 git stash list
 ```
 
-### 0F: Project documentation
+### 0F: Project documentation (current branch)
 
 Read these files if they exist (use the Read tool for each):
 
@@ -142,6 +142,38 @@ Read these files if they exist (use the Read tool for each):
 5. `CHANGELOG.md` — Recent changes (last 50 lines)
 6. `README.md` — Project overview (first 80 lines)
 7. Any plan files found: `find . -maxdepth 3 -name "*.plan.md" -o -name "PLAN.md" | head -5`
+
+### 0F2: Project documentation on unmerged branches (THIS IS CRITICAL — DO NOT SKIP)
+
+An unmerged branch is in-flight work. Its docs are part of the project's current
+state. For each unmerged remote branch found in Step 0B, check if it has newer
+versions of key docs or significant new files:
+
+```bash
+echo "=== DOCS ON UNMERGED BRANCHES ==="
+DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo "main")
+for branch in $(git branch -r --no-merged "origin/$DEFAULT" 2>/dev/null | sed 's/^ *//' | head -10); do
+  CHANGED=$(git diff --name-only "origin/$DEFAULT...$branch" 2>/dev/null)
+  if echo "$CHANGED" | grep -qiE '(HANDOFF|TODO|progress|CHANGELOG|README|CLAUDE|\.plan\.md|PLAN\.md|DESIGN|WORKFLOW|ARCHITECTURE)'; then
+    echo "--- $branch ---"
+    echo "$CHANGED" | grep -iE '(HANDOFF|TODO|progress|CHANGELOG|README|CLAUDE|\.plan\.md|PLAN\.md|DESIGN|WORKFLOW|ARCHITECTURE)'
+  fi
+done
+```
+
+For each doc found, **read it with `git show <branch>:<path>`** and use the
+latest version across all branches as your source of truth. Pay special
+attention to:
+
+- **HANDOFF.md** — may have a newer session handoff with different next steps
+- **TODOS.md** — may have new tasks or priority changes
+- **New doc files** (DESIGN, WORKFLOW, ARCHITECTURE, etc.) — may contain
+  approved architecture decisions that reshape the project's direction
+
+**Why this matters:** A session that writes docs and pushes to a branch but
+doesn't merge to the default branch still produced real decisions and context.
+If you only read docs from the default branch, you'll miss the most recent
+session's work entirely — and your briefing will be incomplete.
 
 ### 0G: CI/CD and deploy status
 
