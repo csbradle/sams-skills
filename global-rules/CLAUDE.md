@@ -1,5 +1,14 @@
 # Global Rules
 
+## Task completion summary
+
+When you finish a task and are waiting for the user's next prompt, always end with a concise summary:
+
+1. **What you did** — plain-language recap of the work completed. Bullet points are fine if multiple things happened.
+2. **Recommended next steps** — what to do next to advance the project. Be specific and actionable, not generic.
+
+Keep it brief. Match the length to the complexity of the work — a one-line fix gets a one-line summary, a multi-file refactor gets bullets. Write for a product manager, not a compiler.
+
 ## progress.md — Mandatory Session Tracking
 
 Every project MUST have a `progress.md` file at the repository root. Update it at the **start** and **end** of every session, and after any major milestone within a session.
