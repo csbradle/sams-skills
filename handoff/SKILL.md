@@ -253,14 +253,14 @@ Read progress.md and look for `## Session — [today's date]`.
 One-line summary of the primary objective for this session.
 
 ### Progress Made
-- Bullet list of everything accomplished this session
-- Include file paths and line numbers for code changes
-- Note what was attempted vs what actually landed
+- (YYYY-MM-DD) Bullet list of everything accomplished this session
+- (YYYY-MM-DD) Include file paths and line numbers for code changes
+- (YYYY-MM-DD) Note what was attempted vs what actually landed
 
 ### Outstanding TODOs
-- [ ] Remaining work from this session
-- [ ] Carried forward from prior sessions (note original date)
-- [ ] Newly discovered work
+- [ ] (added YYYY-MM-DD) Remaining work from this session
+- [ ] (added YYYY-MM-DD) Carried forward from prior sessions
+- [ ] (added YYYY-MM-DD) Newly discovered work
 
 ### Decisions Log
 Each decision MUST be tagged:
@@ -319,6 +319,7 @@ Be honest and specific. Examples:
 
 ### Rules for progress.md:
 - **NEVER delete prior session entries** — this is an append-only running document
+- **Date-stamp every entry** — every bullet in Progress Made, every TODO, every decision, every open question gets a `(YYYY-MM-DD)` or `(added YYYY-MM-DD)` prefix
 - **One entry per session per day** — multiple handoffs in a day UPDATE the same entry
 - **New sessions go at the top** (most recent first, below the title)
 - **Be brutally honest** in the session log — this is for learning, not PR
