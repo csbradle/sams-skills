@@ -1,12 +1,14 @@
 ---
 name: handoff
-version: 1.0.0
+version: 2.0.0
 description: |
-  End-of-session handoff: captures everything about the current state of work,
-  ensures all code/files are committed and pushed to GitHub, and writes a
-  comprehensive handoff document. Nothing gets lost between sessions.
-  Use when: "handoff", "end session", "save state", "wrap up", "I'm done for now",
-  "switching to another project", "closing out", or before ending any session.
+  Checkpoint and sync: captures current state of work, ensures all code/files
+  are committed and pushed to GitHub, and updates project docs. Safe to run
+  multiple times per session — after planning, after implementation, after QA,
+  or at end of session. Nothing gets lost.
+  Use when: "handoff", "checkpoint", "save", "push", "sync", "end session",
+  "save state", "wrap up", "I'm done for now", "switching to another project",
+  "closing out", after completing a phase of work, or before ending any session.
 allowed-tools:
   - Bash
   - Read
@@ -18,14 +20,19 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /handoff — Session Handoff & GitHub Sync
+# /handoff — Checkpoint & GitHub Sync
 
 One command. Everything gets saved, committed, pushed, and documented.
+Run it after each phase of work — planning, implementation, QA, or end of session.
 The next session (or the next person) picks up with zero context loss.
 
 **The problem this solves:** Claude sessions lose context between conversations.
 Files get left uncommitted, branches go unpushed, and the next session rebuilds
 work that already exists. /handoff makes that impossible.
+
+**Safe to run multiple times per session.** Each run updates the existing session
+entry in progress.md (accumulates, never duplicates) and overwrites HANDOFF.md
+with the latest snapshot.
 
 ---
 
@@ -209,7 +216,13 @@ If important-looking files are gitignored (plans, configs, docs, SQL migrations)
 
 ## Step 5: Update progress.md
 
-The project MUST have a `progress.md` at the repo root. This is a **running document** — never delete prior session entries.
+progress.md is the **running story** of the project. It owns the narrative:
+decisions, reasoning, mistakes, open questions, ideas, and technical debt.
+It does NOT need to duplicate state that HANDOFF.md covers (branch status,
+PR status, next steps, blockers).
+
+The project MUST have a `progress.md` at the repo root. This is a **running
+document** — never delete prior session entries.
 
 ### If progress.md does not exist, create it with this structure:
 
@@ -217,7 +230,21 @@ The project MUST have a `progress.md` at the repo root. This is a **running docu
 # Progress — [Project Name]
 ```
 
-### Then add a new session entry at the top (below the title, above any prior sessions):
+### Check if today's session entry already exists:
+
+Read progress.md and look for `## Session — [today's date]`.
+
+**If today's entry ALREADY exists** (this is a mid-session checkpoint):
+- **UPDATE the existing entry in-place** — do NOT create a duplicate
+- Append new bullets to Progress Made, Outstanding TODOs, Decisions Log, etc.
+- Add a phase marker to the Session Log (e.g., `#### After Planning`, `#### After Implementation`, `#### After QA`)
+- Update Files Changed to include any new files since last checkpoint
+- Preserve everything already written — only add, never remove
+
+**If today's entry does NOT exist** (first handoff of the session):
+- Add a new session entry at the top (below the title, above any prior sessions)
+
+### Session entry template:
 
 ```markdown
 ## Session — [YYYY-MM-DD]
@@ -254,12 +281,24 @@ Format: **[TAG] Decision** — Context, alternatives considered, trade-offs.
 - Long-term architectural visions discussed
 
 ### Session Log
-Chronological narrative of the session including:
+Chronological narrative of the session. Use phase markers when running
+multiple checkpoints per session:
+
+#### After Planning
+- What was explored, what approach was chosen, what was rejected
+
+#### After Implementation
+- What was built, what changed from the plan, surprises encountered
+
+#### After QA
+- What was tested, what broke, what was fixed
+
+Each phase section should include:
 - **Exploration & Discovery** — What we searched for, what we found, dead ends
 - **Architectural Decisions** — Why we structured things a certain way
-- **Mistakes & Corrections** — Claude errors (hallucinated APIs, wrong assumptions, overcomplicated solutions), user prompt corrections (ambiguous asks that needed clarification, scope changes mid-task)
-- **Blockers Hit** — What stopped progress and how it was resolved (or not)
-- **Key Back-and-Forth** — Significant disagreements or pivots in approach
+- **Mistakes & Corrections** — Claude errors, user prompt corrections
+- **Blockers Hit** — What stopped progress and how it was resolved
+- **Key Back-and-Forth** — Significant disagreements or pivots
 
 Be honest and specific. Examples:
 - "Claude initially generated a REST endpoint but user clarified this should be a background job — wasted ~10 min"
@@ -280,11 +319,13 @@ Be honest and specific. Examples:
 
 ### Rules for progress.md:
 - **NEVER delete prior session entries** — this is an append-only running document
+- **One entry per session per day** — multiple handoffs in a day UPDATE the same entry
 - **New sessions go at the top** (most recent first, below the title)
 - **Be brutally honest** in the session log — this is for learning, not PR
 - **Tag every decision** — no untagged decisions
 - **Convert relative dates to absolute** — "next week" becomes "2026-04-09"
 - **Populate from real data** — run `git log`, `git diff`, review conversation history; don't guess
+- **Don't duplicate HANDOFF.md content** — progress.md does NOT need branch status, PR status, next steps, or blockers. Those live in HANDOFF.md.
 - **Commit progress.md** as part of the handoff commit
 
 After updating progress.md, commit it:
@@ -298,20 +339,22 @@ Then continue to write the handoff document.
 
 ## Step 6: Write the Handoff Document
 
-Create the handoff document at `.github/HANDOFF.md` (so it's visible on GitHub).
+HANDOFF.md is the **current state snapshot** — a status board for the next session
+to pick up immediately. It owns: branch status, PR status, blockers, and next steps.
+It does NOT need to duplicate the narrative, decisions, or session log from progress.md.
 
-**The handoff doc MUST contain ALL of the following sections:**
+**This file is overwritten each run.** That's intentional — it's a snapshot, not a log.
+The history lives in progress.md.
+
+Create or overwrite `.github/HANDOFF.md`:
 
 ```markdown
-# Session Handoff — [Project Name]
+# Handoff — [Project Name]
 
-**Date:** [YYYY-MM-DD HH:MM]
+**Last updated:** [YYYY-MM-DD HH:MM]
+**Phase:** [Planning / Implementation / QA / End of session]
 **Branch:** [current branch]
 **Last commit:** [short hash + message]
-
-## What Was Done This Session
-[Bullet list of all work completed. Be specific — file names, feature names,
-bug fixes. Read the git log and diff to compile this, don't rely on memory.]
 
 ## Current State
 - **Branch:** [branch] — [what this branch is for]
@@ -329,12 +372,15 @@ bug fixes. Read the git log and diff to compile this, don't rely on memory.]
   - What it does: [1-2 sentence summary]
   - What's needed: [review/QA/fixes/merge]
 
+[If no open PRs: "No outstanding PRs."]
+
 ## Uncommitted/Unpushed Work
 [List anything that didn't make it to GitHub, with details on what it is
 and why it wasn't committed. If everything is pushed, say "All work is in GitHub."]
 
 ## Known Issues & Blockers
-[Anything broken, blocked, or waiting on external input]
+[Anything broken, blocked, or waiting on external input.
+If none: "No known blockers."]
 
 ## Next Steps (Priority Order)
 1. [Most important next action — be specific]
@@ -342,20 +388,10 @@ and why it wasn't committed. If everything is pushed, say "All work is in GitHub
 3. [Third priority]
 [Include: merge outstanding PRs, address review feedback, continue feature work, etc.]
 
-## Key Files Modified
-[List the most important files touched this session with brief descriptions]
-
-## Context for Next Session
-[Anything the next session needs to know that isn't obvious from the code.
-Architecture decisions made, approaches tried and rejected, gotchas discovered,
-environment setup notes, etc.]
-
-## Project File Locations
-- CLAUDE.md: [exists/missing]
-- TODOS.md: [exists/missing — summary of open items if exists]
-- README.md: [exists/missing]
-- Plan files: [list any plan files found]
-- Design docs: [list any design docs found]
+## Quick Context
+[2-3 sentences max. Only things the next session needs that aren't obvious
+from the code or progress.md. Gotchas, environment quirks, "don't forget to X."
+For the full story — decisions, reasoning, mistakes — see progress.md.]
 ```
 
 ---
@@ -364,9 +400,12 @@ environment setup notes, etc.]
 
 ```bash
 git add .github/HANDOFF.md progress.md
-git commit -m "docs: session handoff — [date]"
+git commit -m "docs: checkpoint after [phase] — [date]"
 git push
 ```
+
+Use the actual phase in the commit message: "planning", "implementation", "QA",
+or "end of session".
 
 ---
 
@@ -416,3 +455,12 @@ Present the final summary to the user:
   doesn't rebuild work that already exists.
 - **Actually run tests/build if possible.** Don't write "tests: not checked" if
   you can run them in 30 seconds.
+- **Never duplicate between files.** progress.md owns the story (decisions,
+  narrative, mistakes, ideas, debt). HANDOFF.md owns the snapshot (state, PRs,
+  blockers, next steps). If information belongs in one, don't put it in the other.
+- **One session entry per day in progress.md.** Multiple handoffs in the same
+  session UPDATE the existing entry — they never create duplicates. Use phase
+  markers (`#### After Planning`, `#### After Implementation`, etc.) to show
+  progression within the entry.
+- **HANDOFF.md is always overwritten.** It's a snapshot, not a log. The log is
+  progress.md.
