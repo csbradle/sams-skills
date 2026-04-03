@@ -33,14 +33,14 @@ Every project MUST have a `progress.md` file at the repository root. Update it a
 One-line summary of the primary objective for this session.
 
 ### Progress Made
-- Bullet list of everything accomplished this session
-- Include file paths and line numbers for code changes
-- Note what was attempted vs what actually landed
+- (YYYY-MM-DD) Bullet list of everything accomplished this session
+- (YYYY-MM-DD) Include file paths and line numbers for code changes
+- (YYYY-MM-DD) Note what was attempted vs what actually landed
 
 ### Outstanding TODOs
-- [ ] Remaining work from this session
-- [ ] Carried forward from prior sessions (note original date)
-- [ ] Newly discovered work
+- [ ] (added YYYY-MM-DD) Remaining work from this session
+- [ ] (added YYYY-MM-DD) Carried forward from prior sessions
+- [ ] (added YYYY-MM-DD) Newly discovered work
 
 ### Decisions Log
 Each decision should be tagged:
@@ -90,8 +90,9 @@ Be honest and specific. Example entries:
 
 ### Rules for maintaining progress.md:
 1. **Never delete prior session entries** — append new sessions above old ones
-2. **Be brutally honest** in the session log — this is for learning, not PR
-3. **Tag every decision** — no untagged decisions in the decisions log
-4. **Convert relative dates to absolute** — "next week" becomes "2026-04-09"
-5. **Keep it concise but complete** — each section should be scannable in 30 seconds
-6. **If the session is very short** (< 5 minutes, single question), skip the full template and just add a one-line entry under the current date
+2. **Date-stamp every entry** — every bullet in Progress Made, every TODO, every decision, every open question gets a `(YYYY-MM-DD)` or `(added YYYY-MM-DD)` prefix so you can tell when things were added, completed, or first raised
+3. **Be brutally honest** in the session log — this is for learning, not PR
+4. **Tag every decision** — no untagged decisions in the decisions log
+5. **Convert relative dates to absolute** — "next week" becomes "2026-04-09"
+6. **Keep it concise but complete** — each section should be scannable in 30 seconds
+7. **If the session is very short** (< 5 minutes, single question), skip the full template and just add a one-line entry under the current date
