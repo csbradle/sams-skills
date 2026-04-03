@@ -1,10 +1,10 @@
 ---
 name: kickoff
-version: 1.0.0
+version: 2.0.0
 description: |
-  Project status briefing: tells you exactly what's going on — open PRs, branches,
-  recent work, blockers — and suggests prioritized next steps. Catches outstanding
-  PRs so you never rebuild work that already exists.
+  Product-level status briefing: plain-language summary of where the project stands,
+  what phase we're in, what's left to do, and what to work on next. Written for
+  a non-technical product manager — leads with context and goals, not git details.
   Use when: "kickoff", "what's going on", "where are we", "what's the status",
   "catch me up", "what's next", "wtf is going on", or at the start of any session.
 allowed-tools:
@@ -18,14 +18,15 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /kickoff — WTF Is Going On
+# /kickoff — Where Are We?
 
-One command. Full project status briefing with prioritized next steps.
-Never rebuild work that already exists. Never miss an outstanding PR.
+One command. A plain-language briefing on the project: what we're building,
+where we are, what's in flight, and what to do next. Written so a non-technical
+product manager can read it and make prioritization decisions.
 
-**The problem this solves:** You ask "where are we?" and get an incomplete answer —
-missed PRs, forgotten branches, rebuilt features. /kickoff does a forensic scan
-of everything and tells you what's actually going on.
+**The problem this solves:** You sit down and need to know what's going on.
+Not git branches — the actual state of the product. What shipped, what's half-done,
+what's waiting, and what matters most right now.
 
 ---
 
@@ -171,167 +172,197 @@ gh issue list --state open --json number,title,labels,assignees,url --limit 15 2
 
 ---
 
-## Step 1: Analyze and Classify
+## Step 1: Synthesize Everything Into a Product-Level Picture
 
-After gathering ALL data from Step 0, classify everything into these categories:
+After gathering ALL data from Step 0, answer these questions before writing
+anything. Do not present raw git output — translate everything into product terms.
 
-### Outstanding PRs Requiring Action
-For each open PR, determine what it needs:
-- **Needs review** — No reviews yet, or review requested
-- **Needs QA** — Reviewed but not tested
-- **Needs fixes** — Changes requested in review
-- **Ready to merge** — Approved, CI passing, ready to go
-- **Draft** — Work in progress
-- **Blocked** — CI failing, merge conflicts, or waiting on something
+1. **What is this project?** What are we building and why? What does the
+   finished product look like? (Pull from README, CLAUDE.md, progress.md)
 
-### Branches With Unfinished Work
-For each branch that's not merged:
-- What does it contain? (read the commit messages)
-- Is there a PR for it?
-- Is there uncommitted/unpushed work?
+2. **Where are we in the arc of work?** Are we early (exploring/planning),
+   mid-build (implementing), late-stage (reviewing/testing/polishing), or
+   maintaining (shipped, doing incremental work)?
 
-### Current Branch Context
-- What was the last thing done on this branch?
-- Are there uncommitted changes?
-- Is it behind the default branch?
+3. **What phase is the current work in?**
+   - **Planning** — a plan exists but hasn't been implemented yet
+   - **Implementation** — actively building, code is being written
+   - **Review/QA** — built but needs review, testing, or fixes
+   - **Ready to ship** — approved, tests passing, ready to merge/deploy
+   - **Blocked** — waiting on something external
+   - **Between tasks** — last thing wrapped up, nothing in progress
+
+4. **What's in flight right now?** Open PRs, active branches, uncommitted work.
+   Translate each into what it means for the product, not the codebase.
+
+5. **What's deferred?** TODOs from progress.md, open questions, future ideas,
+   technical debt. These are the backlog.
 
 ---
 
-## Step 2: Present the Status Report
+## Step 2: Present the Briefing
 
-Present everything to the user in this format:
+Write the briefing in plain language. A non-technical product manager should
+be able to read this and understand everything without knowing git, branches,
+or PRs. Use the exact format below.
 
 ```markdown
-## Project Status: [Project Name]
+## [Project Name]
 
-**Date:** [today's date]
-**Branch:** [current branch]
-**Default branch:** [main/master]
+### The Goal
+[2-3 sentences. What are we building? What does the end state look like?
+What problem does it solve for users? This grounds every session in the
+same shared vision. Pull from README, CLAUDE.md, progress.md, or infer
+from the codebase if none of those exist.]
 
----
+### Where We Are
+[A practical, qualitative summary. Write this like you're catching up a
+colleague over coffee. Examples:
 
-### OUTSTANDING PULL REQUESTS
-[This section is MANDATORY. If there are open PRs, this is the FIRST thing shown.]
+"We've been building a customer payments system. Last session we finished
+integrating Stripe for processing, and a PR is open with that work ready
+to merge. The next piece is a finance dashboard so customers can see their
+payment history."
 
-[For EACH open PR:]
-**PR #[N]: [title]** — [status emoji] [status]
-- Branch: [head] → [base]
-- What it does: [1-2 sentence summary from PR body/commits]
-- CI: [passing/failing/pending]
-- Reviews: [none/approved/changes requested]
-- **Action needed:** [specific action — "merge it", "run /review", "run /qa", "fix CI", etc.]
-- URL: [link]
+"The authentication rewrite is about halfway done. We planned out the new
+flow, implemented the login and signup endpoints, and now we need to build
+the password reset flow and add tests. There's a draft PR open with the
+work so far."
 
-[If NO open PRs: "No outstanding PRs."]
+"We just shipped the v2 API. Everything is deployed and stable. There are
+a few cleanup items from the launch and one bug report to triage."
 
----
+Be specific about what's done, what's in progress, and what's next.]
 
-### UNCOMMITTED/UNPUSHED WORK
-[List any uncommitted changes, unpushed branches, stashed work]
-[If clean: "All work is committed and pushed."]
+### Current Phase: [Planning / Building / Reviewing / Ready to Ship / Blocked / Between Tasks]
+[1-2 sentences explaining what this means concretely. If we're mid-execution:
 
----
+- **Planning**: "We have a plan for [feature] but haven't started coding yet.
+  The plan is in [file/PR]."
+- **Building**: "We're actively implementing [feature]. [N] of [M] pieces
+  are done. The current work is on branch [branch]."
+- **Reviewing**: "The [feature] implementation is complete and needs
+  [review/testing/fixes]. PR #N is open."
+- **Ready to Ship**: "PR #N is approved and CI is green. It just needs to
+  be merged."
+- **Blocked**: "We're waiting on [what] before we can continue."
+- **Between Tasks**: "The last item wrapped up. Here's what's on deck."]
+```
 
-### RECENT ACTIVITY
-[Summary of last 5-10 commits, what was shipped, what was merged]
+If there are open PRs, add:
 
----
+```markdown
+### Work in Progress
+[For each open PR, describe it in product terms:]
+- **[What it does in plain English]** — [status: ready to merge / needs review /
+  needs fixes / draft]. [One sentence on what's needed to move it forward.]
+  (PR #N)
 
-### PROJECT HEALTH
-- Tests: [status if known]
-- CI: [last run status]
-- Deploy: [status if known]
-- Open issues: [count and top 3]
+[For branches with no PR but significant work:]
+- **[What it does]** — code exists but no PR yet. [What needs to happen.]
+```
 
----
+Always include:
 
-### RECOMMENDED NEXT STEPS (Priority Order)
+```markdown
+### To-Do List
+[Compiled from progress.md outstanding TODOs, HANDOFF.md next steps,
+TODOS.md, open GitHub issues, and anything inferred from the codebase.
+Group by priority, not by source.]
 
-[Number each step. Be extremely specific.]
+**Finish current work:**
+- [ ] [Specific next action to complete in-progress work]
+- [ ] [etc.]
 
-1. **[HIGHEST PRIORITY]** [specific action]
-   - Why: [reason]
-   - How: [exact command or skill to run]
+**Up next:**
+- [ ] [Next feature/task after current work is done]
+- [ ] [etc.]
 
-2. **[NEXT PRIORITY]** [specific action]
-   - Why: [reason]
-   - How: [exact command or skill to run]
+**Deferred / Backlog:**
+- [ ] [Items noted but not yet prioritized]
+- [ ] [Open questions that need answers before they can move forward]
+- [ ] [Technical debt / cleanup items]
+- [ ] [Future ideas and aspirations from progress.md]
 
-3. [etc.]
+### Decisions Needed
+[Surface any open questions from progress.md, unresolved blockers,
+or prioritization choices that need human input. If none: omit this section.]
 ```
 
 ---
 
-## Priority Rules for Next Steps
+## Step 3: Recommend What to Do Next
 
-When determining priority order:
+After the briefing, ask via AskUserQuestion:
 
-1. **Merge-ready PRs first.** If a PR is approved and CI passing, the #1 next step
-   is always "merge PR #X." Don't let approved work sit.
-
-2. **PRs needing review second.** If a PR exists but hasn't been reviewed,
-   the next step is "run /review on PR #X" or "run /qa on PR #X" — NOT
-   "rebuild the feature."
-
-3. **PRs needing fixes third.** If review requested changes, fix those changes.
-
-4. **Uncommitted work fourth.** If there's local work not in GitHub, commit and push it.
-
-5. **New work last.** Only suggest starting new features/tasks after all existing
-   work is accounted for.
-
-**CRITICAL RULE:** If an outstanding PR covers work that the user might ask about,
-ALWAYS mention the PR. The sentence "PR #X already implements [feature]" prevents
-the catastrophic failure of rebuilding existing work.
+> **Here's what I'd recommend working on:**
+>
+> A) [Highest priority — usually finishing in-progress work or merging
+>    a ready PR. Describe in product terms, not git terms.]
+> B) [Second priority]
+> C) [Third priority]
+> D) Something else — tell me what you'd like to focus on
+>
+> [If there's a merge-ready PR: "Note: there's finished work ready to
+> ship (PR #N). I'd recommend merging that first before starting anything new."]
 
 ---
 
-## Step 3: Ask What's Next
+## Priority Rules
 
-After presenting the status, ask via AskUserQuestion:
+When determining what to recommend:
 
-> **[Project name] on branch [branch].**
->
-> [1-sentence summary of project state]
->
-> Based on the status above, here's what I recommend:
->
-> A) [Highest priority action from the report]
-> B) [Second priority action]
-> C) [Third priority action]
-> D) Something else (tell me what you'd like to work on)
+1. **Ship finished work first.** If a PR is approved and passing, the #1 action
+   is always to merge it. Don't let done work sit.
+
+2. **Finish in-progress work second.** If we're mid-build or mid-review,
+   continue that — don't start something new.
+
+3. **Unblock blocked work third.** If something is waiting on a decision,
+   fix, or external input, surface it.
+
+4. **New work last.** Only suggest starting fresh features after existing
+   work is accounted for.
+
+**CRITICAL RULE:** If an outstanding PR covers work that the user might ask about,
+ALWAYS mention it. The sentence "that's already built — PR #X has it ready to
+merge" prevents the catastrophic failure of rebuilding existing work.
 
 ---
 
 ## Important Rules
 
-- **NEVER suggest building something that has an open PR.** This is the #1 rule.
-  If a PR exists for a feature, the next step is to review/QA/merge that PR.
-  NEVER suggest reimplementing it.
+- **Lead with the product, not the plumbing.** The first thing the user reads
+  should be what we're building and where we are — not branch names, commit
+  hashes, or git status. Technical details support the narrative; they don't
+  lead it.
 
-- **Run real commands, don't guess.** Every claim in the status report must come
-  from actual git/gh commands, not from conversation memory or assumptions.
+- **Write for a non-technical product manager.** If you catch yourself writing
+  "the feature branch is 3 commits ahead of main," rewrite it as "the feature
+  is built and ready for review." PR numbers go in parentheses at the end of
+  a line, not as the headline.
 
-- **Read the handoff doc if it exists.** `.github/HANDOFF.md` was written by
-  /handoff specifically for this moment. Use it.
+- **NEVER suggest building something that has an open PR.** If a PR exists for
+  a feature, the next step is to review/merge it — NEVER reimplement it.
+
+- **Run real commands, don't guess.** Every claim must come from actual git/gh
+  commands. But present the *meaning*, not the raw output.
+
+- **Read progress.md FIRST.** This is the running session log. It has the
+  project vision, outstanding TODOs, open questions, decision history, and
+  future ideas. Surface all of these in the briefing. If progress.md doesn't
+  exist, note that and suggest creating one.
+
+- **Read HANDOFF.md if it exists.** It has the latest snapshot: current state,
+  blockers, and next steps from the last checkpoint.
+
+- **Surface deferred work.** TODOs, open questions, future ideas, and technical
+  debt from progress.md are the backlog. Don't bury them — they're how the
+  user decides what to prioritize.
+
+- **Be specific in recommendations.** "Continue feature work" is useless.
+  "Finish the password reset flow — the login and signup endpoints are done,
+  this is the last piece before we can ship auth" is useful.
 
 - **Check ALL branches, not just the current one.** Work might exist on other
-  branches. A feature branch with 15 commits and no PR is important context.
-
-- **Include PR details.** Don't just list PR numbers — summarize what each PR
-  does so the user (and you) know whether it overlaps with requested work.
-
-- **Be specific in next steps.** "Continue feature work" is useless.
-  "Merge PR #12 (approved, CI green), then implement email notifications
-  starting from src/services/notify.ts" is useful.
-
-- **Check for stale branches.** If a branch hasn't been touched in weeks and
-  has no PR, flag it — it might be abandoned work or a forgotten feature.
-
-- **Read TODOS.md.** Outstanding tasks in TODOS.md are part of the project state.
-  Include them in your prioritization.
-
-- **Read progress.md FIRST.** This is the running session log. It has outstanding
-  TODOs, open questions, decision history, and future ideas from every prior
-  session. Surface carried-forward TODOs and open questions in your status report.
-  If progress.md doesn't exist, note that in the report and suggest creating one.
+  branches. Translate what you find into product terms.
