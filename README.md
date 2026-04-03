@@ -72,6 +72,35 @@ Custom [Claude Code](https://claude.ai/claude-code) skills for managing multi-pr
 
 ---
 
+### `/clone` — Sync Local Repo With GitHub
+
+**When to use:** Start of a work session, when you want the latest code, or anytime you're unsure if your local repo is current.
+
+**What it does:**
+1. Checks for uncommitted work — asks whether to stash, commit, discard, or abort
+2. Fetches everything from remote (`git fetch --all --prune`)
+3. Syncs your current branch — fast-forwards if possible, asks about rebase vs merge if behind
+4. Updates the default branch (main/master) silently in the background
+5. Stops on conflicts — surfaces them, never auto-resolves
+6. Re-applies stashed work if it stashed anything
+7. Detects dependency/config changes — flags if lock files, `.env.example`, migrations, or CI config changed, and offers to install updated dependencies
+8. Gives you a summary of what moved
+
+**The problem it solves:** You sit down to work and aren't sure if you have the latest code. Maybe there are uncommitted changes, maybe the remote moved ahead, maybe dependencies changed. `/clone` handles all of it so you start from a clean, current state.
+
+**Safety rules:**
+- Never force-pushes, resets, or deletes branches without confirmation
+- Never auto-resolves merge conflicts
+- Always stashes before syncing if the working directory is dirty
+- Stays on your current branch — doesn't switch unless asked
+
+**Usage:**
+```
+/clone
+```
+
+---
+
 ## Global Rules
 
 ### `progress.md` — Mandatory Session Tracking
@@ -111,6 +140,7 @@ git clone https://github.com/csbradle/sams-skills.git
 # Copy skills to your Claude Code skills directory
 cp -r sams-skills/handoff ~/.claude/skills/handoff
 cp -r sams-skills/kickoff ~/.claude/skills/kickoff
+cp -r sams-skills/clone ~/.claude/skills/clone
 
 # Copy global rules
 cp sams-skills/global-rules/CLAUDE.md ~/.claude/CLAUDE.md
@@ -123,12 +153,13 @@ git clone https://github.com/csbradle/sams-skills.git ~/sams-skills
 
 ln -s ~/sams-skills/handoff ~/.claude/skills/handoff
 ln -s ~/sams-skills/kickoff ~/.claude/skills/kickoff
+ln -s ~/sams-skills/clone ~/.claude/skills/clone
 cp ~/sams-skills/global-rules/CLAUDE.md ~/.claude/CLAUDE.md
 ```
 
 ### Verify installation
 
-Open Claude Code and type `/handoff` or `/kickoff` — they should appear in the skill list.
+Open Claude Code and type `/handoff`, `/kickoff`, or `/clone` — they should appear in the skill list.
 
 ## Requirements
 
@@ -141,9 +172,9 @@ Open Claude Code and type `/handoff` or `/kickoff` — they should appear in the
 The ideal workflow across sessions:
 
 ```
-Session 1:  ... do work ... → /handoff (end of session)
-Session 2:  /kickoff (start) → ... do work ... → /handoff (end)
-Session 3:  /kickoff (start) → ... do work ... → /handoff (end)
+Session 1:  /clone (sync) → ... do work ... → /handoff (end of session)
+Session 2:  /clone (sync) → /kickoff (status) → ... do work ... → /handoff (end)
+Session 3:  /clone (sync) → /kickoff (status) → ... do work ... → /handoff (end)
 ```
 
 Every session starts informed and ends clean. Nothing gets lost.
