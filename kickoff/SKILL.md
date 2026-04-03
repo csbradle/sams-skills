@@ -127,12 +127,20 @@ git stash list
 
 Read these files if they exist (use the Read tool for each):
 
-1. `.github/HANDOFF.md` — Previous session's handoff document
-2. `CLAUDE.md` — Project instructions and context
-3. `TODOS.md` — Outstanding tasks
-4. `CHANGELOG.md` — Recent changes (last 50 lines)
-5. `README.md` — Project overview (first 80 lines)
-6. Any plan files found: `find . -maxdepth 3 -name "*.plan.md" -o -name "PLAN.md" | head -5`
+1. **`progress.md`** — Running session progress log. **Read this FIRST.** It contains:
+   - Prior session goals, progress, and outcomes
+   - Outstanding TODOs carried forward from previous sessions
+   - Decision history (tagged [USER]/[CLAUDE]/[JOINT])
+   - Open questions and future ideas
+   - Session logs with mistakes, corrections, and key learnings
+   - Technical debt identified but not yet addressed
+   This is the single most important context file for understanding where the project stands.
+2. `.github/HANDOFF.md` — Previous session's handoff document
+3. `CLAUDE.md` — Project instructions and context
+4. `TODOS.md` — Outstanding tasks
+5. `CHANGELOG.md` — Recent changes (last 50 lines)
+6. `README.md` — Project overview (first 80 lines)
+7. Any plan files found: `find . -maxdepth 3 -name "*.plan.md" -o -name "PLAN.md" | head -5`
 
 ### 0G: CI/CD and deploy status
 
@@ -322,3 +330,8 @@ After presenting the status, ask via AskUserQuestion:
 
 - **Read TODOS.md.** Outstanding tasks in TODOS.md are part of the project state.
   Include them in your prioritization.
+
+- **Read progress.md FIRST.** This is the running session log. It has outstanding
+  TODOs, open questions, decision history, and future ideas from every prior
+  session. Surface carried-forward TODOs and open questions in your status report.
+  If progress.md doesn't exist, note that in the report and suggest creating one.

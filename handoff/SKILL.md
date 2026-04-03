@@ -207,7 +207,96 @@ If important-looking files are gitignored (plans, configs, docs, SQL migrations)
 
 ---
 
-## Step 5: Write the Handoff Document
+## Step 5: Update progress.md
+
+The project MUST have a `progress.md` at the repo root. This is a **running document** — never delete prior session entries.
+
+### If progress.md does not exist, create it with this structure:
+
+```markdown
+# Progress — [Project Name]
+```
+
+### Then add a new session entry at the top (below the title, above any prior sessions):
+
+```markdown
+## Session — [YYYY-MM-DD]
+
+### Session Goal
+One-line summary of the primary objective for this session.
+
+### Progress Made
+- Bullet list of everything accomplished this session
+- Include file paths and line numbers for code changes
+- Note what was attempted vs what actually landed
+
+### Outstanding TODOs
+- [ ] Remaining work from this session
+- [ ] Carried forward from prior sessions (note original date)
+- [ ] Newly discovered work
+
+### Decisions Log
+Each decision MUST be tagged:
+- **[USER]** — Explicit decision made by the user
+- **[CLAUDE]** — Decision made autonomously by Claude (include reasoning)
+- **[JOINT]** — Decision reached through discussion
+
+Format: **[TAG] Decision** — Context, alternatives considered, trade-offs.
+
+### Open Questions
+- Questions that came up but weren't resolved
+- Things that need user input in a future session
+- Uncertainties about architecture, requirements, or approach
+
+### Future Ideas & Aspirations
+- Features or improvements mentioned but not yet planned
+- "Wouldn't it be cool if..." ideas that surfaced during work
+- Long-term architectural visions discussed
+
+### Session Log
+Chronological narrative of the session including:
+- **Exploration & Discovery** — What we searched for, what we found, dead ends
+- **Architectural Decisions** — Why we structured things a certain way
+- **Mistakes & Corrections** — Claude errors (hallucinated APIs, wrong assumptions, overcomplicated solutions), user prompt corrections (ambiguous asks that needed clarification, scope changes mid-task)
+- **Blockers Hit** — What stopped progress and how it was resolved (or not)
+- **Key Back-and-Forth** — Significant disagreements or pivots in approach
+
+Be honest and specific. Examples:
+- "Claude initially generated a REST endpoint but user clarified this should be a background job — wasted ~10 min"
+- "User asked to 'fix the bug' without specifying which one — after clarification, it was the race condition in worker.ts"
+- "Claude hallucinated a prisma.upsertMany() method that doesn't exist — switched to transaction with individual upserts"
+
+### Technical Debt & Risks Identified
+- Shortcuts taken that should be revisited
+- Code that works but isn't ideal
+- Performance concerns noticed but not addressed
+
+### Files Changed
+- List of files created, modified, or deleted this session
+- Brief note on what changed in each
+
+---
+```
+
+### Rules for progress.md:
+- **NEVER delete prior session entries** — this is an append-only running document
+- **New sessions go at the top** (most recent first, below the title)
+- **Be brutally honest** in the session log — this is for learning, not PR
+- **Tag every decision** — no untagged decisions
+- **Convert relative dates to absolute** — "next week" becomes "2026-04-09"
+- **Populate from real data** — run `git log`, `git diff`, review conversation history; don't guess
+- **Commit progress.md** as part of the handoff commit
+
+After updating progress.md, commit it:
+```bash
+git add progress.md
+```
+
+Then continue to write the handoff document.
+
+---
+
+## Step 6: Write the Handoff Document
 
 Create the handoff document at `.github/HANDOFF.md` (so it's visible on GitHub).
 
@@ -271,17 +360,17 @@ environment setup notes, etc.]
 
 ---
 
-## Step 6: Commit and Push the Handoff Doc
+## Step 7: Commit and Push the Handoff Doc
 
 ```bash
-git add .github/HANDOFF.md
+git add .github/HANDOFF.md progress.md
 git commit -m "docs: session handoff — [date]"
 git push
 ```
 
 ---
 
-## Step 7: Final Verification
+## Step 8: Final Verification
 
 Run one final check:
 
