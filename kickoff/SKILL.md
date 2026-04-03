@@ -217,22 +217,26 @@ from the codebase if none of those exist.]
 
 ### Where We Are
 [A practical, qualitative summary. Write this like you're catching up a
-colleague over coffee. Examples:
+colleague over coffee. Use dates from progress.md to anchor the timeline
+so the reader knows when things happened — not just what happened.
 
-"We've been building a customer payments system. Last session we finished
+Examples:
+
+"We've been building a customer payments system. On March 28 we finished
 integrating Stripe for processing, and a PR is open with that work ready
 to merge. The next piece is a finance dashboard so customers can see their
 payment history."
 
 "The authentication rewrite is about halfway done. We planned out the new
-flow, implemented the login and signup endpoints, and now we need to build
-the password reset flow and add tests. There's a draft PR open with the
-work so far."
+flow on March 25, implemented the login and signup endpoints on March 27,
+and now we need to build the password reset flow and add tests. There's a
+draft PR open with the work so far."
 
-"We just shipped the v2 API. Everything is deployed and stable. There are
-a few cleanup items from the launch and one bug report to triage."
+"We shipped the v2 API on March 30. Everything is deployed and stable.
+There are a few cleanup items from the launch and one bug report that
+came in yesterday."
 
-Be specific about what's done, what's in progress, and what's next.]
+Be specific about what's done (and when), what's in progress, and what's next.]
 
 ### Current Phase: [Planning / Building / Reviewing / Ready to Ship / Blocked / Between Tasks]
 [1-2 sentences explaining what this means concretely. If we're mid-execution:
@@ -268,21 +272,22 @@ Always include:
 ### To-Do List
 [Compiled from progress.md outstanding TODOs, HANDOFF.md next steps,
 TODOS.md, open GitHub issues, and anything inferred from the codebase.
-Group by priority, not by source.]
+Group by priority, not by source. Preserve the dates from progress.md
+so the reader can see when each item was added and how long it's been open.]
 
 **Finish current work:**
-- [ ] [Specific next action to complete in-progress work]
-- [ ] [etc.]
+- [ ] (added YYYY-MM-DD) [Specific next action to complete in-progress work]
+- [ ] (added YYYY-MM-DD) [etc.]
 
 **Up next:**
-- [ ] [Next feature/task after current work is done]
-- [ ] [etc.]
+- [ ] (added YYYY-MM-DD) [Next feature/task after current work is done]
+- [ ] (added YYYY-MM-DD) [etc.]
 
 **Deferred / Backlog:**
-- [ ] [Items noted but not yet prioritized]
-- [ ] [Open questions that need answers before they can move forward]
-- [ ] [Technical debt / cleanup items]
-- [ ] [Future ideas and aspirations from progress.md]
+- [ ] (added YYYY-MM-DD) [Items noted but not yet prioritized]
+- [ ] (added YYYY-MM-DD) [Open questions that need answers before they can move forward]
+- [ ] (added YYYY-MM-DD) [Technical debt / cleanup items]
+- [ ] (added YYYY-MM-DD) [Future ideas and aspirations from progress.md]
 
 ### Decisions Needed
 [Surface any open questions from progress.md, unresolved blockers,
