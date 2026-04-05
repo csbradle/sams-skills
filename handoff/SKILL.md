@@ -1,11 +1,12 @@
 ---
 name: handoff
-version: 2.0.0
+version: 3.0.0
 description: |
-  Checkpoint and sync: captures current state of work, ensures all code/files
-  are committed and pushed to GitHub, and updates project docs. Safe to run
-  multiple times per session — after planning, after implementation, after QA,
-  or at end of session. Nothing gets lost.
+  Checkpoint, sync, and document: captures current state of work, ensures all
+  code/files are committed and pushed to GitHub, audits and updates all project
+  documentation, and writes handoff docs. Safe to run multiple times per session
+  — after planning, after implementation, after QA, or at end of session.
+  Nothing gets lost.
   Use when: "handoff", "checkpoint", "save", "push", "sync", "end session",
   "save state", "wrap up", "I'm done for now", "switching to another project",
   "closing out", after completing a phase of work, or before ending any session.
@@ -20,15 +21,15 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# /handoff — Checkpoint & GitHub Sync
+# /handoff — Checkpoint, GitHub Sync & Documentation Update
 
-One command. Everything gets saved, committed, pushed, and documented.
+One command. Everything gets saved, committed, pushed, documented, and audited.
 Run it after each phase of work — planning, implementation, QA, or end of session.
 The next session (or the next person) picks up with zero context loss.
 
 **The problem this solves:** Claude sessions lose context between conversations.
-Files get left uncommitted, branches go unpushed, and the next session rebuilds
-work that already exists. /handoff makes that impossible.
+Files get left uncommitted, branches go unpushed, documentation drifts from code,
+and the next session rebuilds work that already exists. /handoff makes that impossible.
 
 **Safe to run multiple times per session.** Each run updates the existing session
 entry in progress.md (accumulates, never duplicates) and overwrites HANDOFF.md
@@ -101,11 +102,22 @@ done
 
 echo "=== PLAN FILES ==="
 find . -maxdepth 3 -name "*.plan.md" -o -name "*-plan-*.md" -o -name "PLAN.md" 2>/dev/null | head -10
-
-echo "=== GSTACK ARTIFACTS ==="
-SLUG=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null)
-ls -lt ~/.gstack/projects/$SLUG/ 2>/dev/null | head -15
 ```
+
+Also detect the platform and base branch for use in later steps:
+
+**Platform detection:**
+- `gh auth status 2>/dev/null` succeeds → platform is **GitHub**
+- `glab auth status 2>/dev/null` succeeds → platform is **GitLab**
+- Neither → **unknown** (use git-native commands only)
+
+**Base branch detection:**
+1. `gh pr view --json baseRefName -q .baseRefName` (GitHub) or `glab mr view -F json` and extract `target_branch` (GitLab)
+2. `gh repo view --json defaultBranchRef -q .defaultBranchRef.name` (GitHub) or `glab repo view -F json` and extract `default_branch` (GitLab)
+3. Git-native fallback: `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||'`
+4. Try `origin/main`, then `origin/master`, then fall back to `main`
+
+Store the detected base branch for use in Step 5 (Documentation Sync).
 
 ---
 
@@ -214,7 +226,262 @@ If important-looking files are gitignored (plans, configs, docs, SQL migrations)
 
 ---
 
-## Step 5: Update progress.md
+## Step 5: Documentation Sync
+
+**Gate:** This step only runs if BOTH conditions are true:
+1. The current branch is NOT the base branch (main/master)
+2. Code changes exist on the branch (not docs-only)
+
+If either condition fails, print "Documentation sync: skipped (on base branch or no code changes)" and proceed to Step 6.
+
+This step ensures every documentation file in the project is accurate, up to date,
+and consistent with the code changes on the branch.
+
+**Automation rules — what to stop for vs what to do automatically:**
+
+**Only stop for:**
+- Risky/questionable doc changes (narrative, philosophy, security, removals, large rewrites)
+- VERSION bump decision (if not already bumped)
+- New TODOS items to add
+- Cross-doc contradictions that are narrative (not factual)
+
+**Never stop for:**
+- Factual corrections clearly from the diff
+- Adding items to tables/lists
+- Updating paths, counts, version numbers
+- Fixing stale cross-references
+- CHANGELOG voice polish (minor wording adjustments)
+- Marking TODOS complete
+- Cross-doc factual inconsistencies (e.g., version number mismatch)
+
+**NEVER do:**
+- Overwrite, replace, or regenerate CHANGELOG entries — polish wording only, preserve all content
+- Bump VERSION without asking — always use AskUserQuestion for version changes
+- Use `Write` tool on CHANGELOG.md — always use `Edit` with exact `old_string` matches
+
+---
+
+### Step 5.1: Pre-flight & Diff Analysis
+
+1. Gather context about what changed on the branch:
+
+```bash
+git diff <base>...HEAD --stat
+git log <base>..HEAD --oneline
+git diff <base>...HEAD --name-only
+```
+
+2. Discover all documentation files in the repo:
+
+```bash
+find . -maxdepth 2 -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./.gstack/*" -not -path "./.context/*" | sort
+```
+
+3. Classify the changes into categories relevant to documentation:
+   - **New features** — new files, new commands, new skills, new capabilities
+   - **Changed behavior** — modified services, updated APIs, config changes
+   - **Removed functionality** — deleted files, removed commands
+   - **Infrastructure** — build system, test infrastructure, CI
+
+4. Output a brief summary: "Analyzing N files changed across M commits. Found K documentation files to review."
+
+---
+
+### Step 5.2: Per-File Documentation Audit
+
+Read each documentation file and cross-reference it against the diff. Use these generic heuristics
+(adapt to whatever project you're in):
+
+**README.md:**
+- Does it describe all features and capabilities visible in the diff?
+- Are install/setup instructions consistent with the changes?
+- Are examples, demos, and usage descriptions still valid?
+- Are troubleshooting steps still accurate?
+
+**ARCHITECTURE.md:**
+- Do ASCII diagrams and component descriptions match the current code?
+- Are design decisions and "why" explanations still accurate?
+- Be conservative — only update things clearly contradicted by the diff. Architecture docs
+  describe things unlikely to change frequently.
+
+**CONTRIBUTING.md — New contributor smoke test:**
+- Walk through the setup instructions as if you are a brand new contributor.
+- Are the listed commands accurate? Would each step succeed?
+- Do test tier descriptions match the current test infrastructure?
+- Are workflow descriptions (dev setup, operational learnings, etc.) current?
+- Flag anything that would fail or confuse a first-time contributor.
+
+**CLAUDE.md / project instructions:**
+- Does the project structure section match the actual file tree?
+- Are listed commands and scripts accurate?
+- Do build/test instructions match what's in package.json (or equivalent)?
+
+**Any other .md files:**
+- Read the file, determine its purpose and audience.
+- Cross-reference against the diff to check if it contradicts anything the file says.
+
+For each file, classify needed updates as:
+- **Auto-update** — Factual corrections clearly warranted by the diff: adding an item to a
+  table, updating a file path, fixing a count, updating a project structure tree.
+- **Ask user** — Narrative changes, section removal, security model changes, large rewrites
+  (more than ~10 lines in one section), ambiguous relevance, adding entirely new sections.
+
+---
+
+### Step 5.3: Apply Auto-Updates
+
+Make all clear, factual updates directly using the Edit tool.
+
+For each file modified, output a one-line summary describing **what specifically changed** — not
+just "Updated README.md" but "README.md: added /new-skill to skills table, updated skill count
+from 9 to 10."
+
+**Never auto-update:**
+- README introduction or project positioning
+- ARCHITECTURE philosophy or design rationale
+- Security model descriptions
+- Do not remove entire sections from any document
+
+---
+
+### Step 5.4: Ask About Risky/Questionable Changes
+
+For each risky or questionable update identified in Step 5.2, use AskUserQuestion with:
+- Context: project name, branch, which doc file, what we're reviewing
+- The specific documentation decision
+- `RECOMMENDATION: Choose [X] because [one-line reason]`
+- Options including C) Skip — leave as-is
+
+Apply approved changes immediately after each answer.
+
+---
+
+### Step 5.5: CHANGELOG Voice Polish
+
+**CRITICAL — NEVER CLOBBER CHANGELOG ENTRIES.**
+
+This step polishes voice. It does NOT rewrite, replace, or regenerate CHANGELOG content.
+
+A real incident occurred where an agent replaced existing CHANGELOG entries when it should have
+preserved them. This skill must NEVER do that.
+
+**Rules:**
+1. Read the entire CHANGELOG.md first. Understand what is already there.
+2. Only modify wording within existing entries. Never delete, reorder, or replace entries.
+3. Never regenerate a CHANGELOG entry from scratch. The entry was written from the
+   actual diff and commit history. It is the source of truth. You are polishing prose, not
+   rewriting history.
+4. If an entry looks wrong or incomplete, use AskUserQuestion — do NOT silently fix it.
+5. Use Edit tool with exact `old_string` matches — never use Write to overwrite CHANGELOG.md.
+
+**If CHANGELOG was not modified on this branch:** skip this sub-step.
+
+**If CHANGELOG was modified on this branch**, review the entry for voice:
+- **Sell test:** Would a user reading each bullet think "oh nice, I want to try that"? If not,
+  rewrite the wording (not the content).
+- Lead with what the user can now **do** — not implementation details.
+- "You can now..." not "Refactored the..."
+- Flag and rewrite any entry that reads like a commit message.
+- Internal/contributor changes belong in a separate "### For contributors" subsection.
+- Auto-fix minor voice adjustments. Use AskUserQuestion if a rewrite would alter meaning.
+
+---
+
+### Step 5.6: Cross-Doc Consistency & Discoverability Check
+
+After auditing each file individually, do a cross-doc consistency pass:
+
+1. Does the README's feature/capability list match what CLAUDE.md (or project instructions) describes?
+2. Does ARCHITECTURE's component list match CONTRIBUTING's project structure description?
+3. Does CHANGELOG's latest version match the VERSION file?
+4. **Discoverability:** Is every documentation file reachable from README.md or CLAUDE.md? If
+   ARCHITECTURE.md exists but neither README nor CLAUDE.md links to it, flag it. Every doc
+   should be discoverable from one of the two entry-point files.
+5. Flag any contradictions between documents. Auto-fix clear factual inconsistencies (e.g., a
+   version mismatch). Use AskUserQuestion for narrative contradictions.
+
+---
+
+### Step 5.7: TODOS.md Cleanup
+
+If TODOS.md does not exist, skip this sub-step.
+
+1. **Completed items not yet marked:** Cross-reference the diff against open TODO items. If a
+   TODO is clearly completed by the changes in this branch, move it to the Completed section
+   with `**Completed:** vX.Y.Z (YYYY-MM-DD)`. Be conservative — only mark items with clear
+   evidence in the diff.
+
+2. **Items needing description updates:** If a TODO references files or components that were
+   significantly changed, its description may be stale. Use AskUserQuestion to confirm whether
+   the TODO should be updated, completed, or left as-is.
+
+3. **New deferred work:** Check the diff for `TODO`, `FIXME`, `HACK`, and `XXX` comments. For
+   each one that represents meaningful deferred work (not a trivial inline note), use
+   AskUserQuestion to ask whether it should be captured in TODOS.md.
+
+---
+
+### Step 5.8: VERSION Bump Question
+
+**CRITICAL — NEVER BUMP VERSION WITHOUT ASKING.**
+
+1. **If VERSION does not exist:** Skip silently.
+
+2. Check if VERSION was already modified on this branch:
+
+```bash
+git diff <base>...HEAD -- VERSION
+```
+
+3. **If VERSION was NOT bumped:** Use AskUserQuestion:
+   - RECOMMENDATION: Choose C (Skip) because this is a checkpoint, not a release
+   - A) Bump PATCH (X.Y.Z+1) — if doc changes ship alongside code changes
+   - B) Bump MINOR (X.Y+1.0) — if this is a significant standalone release
+   - C) Skip — no version bump needed
+
+4. **If VERSION was already bumped:** Check whether the bump still covers the full scope:
+   a. Read the CHANGELOG entry for the current VERSION
+   b. Read the full diff — are there significant changes NOT in the CHANGELOG?
+   c. If covered: "VERSION: Already bumped to vX.Y.Z, covers all changes."
+   d. If uncovered: Use AskUserQuestion explaining what's new vs what's covered
+
+---
+
+### Step 5.9: Stage Documentation & Summarize
+
+**Empty check first:** Run `git status` (never use `-uall`). If no documentation files were
+modified by any previous sub-step, output "All documentation is up to date." and proceed to Step 6.
+
+**If documentation files were modified:**
+
+1. Stage modified documentation files by name (never `git add -A` or `git add .`).
+
+2. Output a scannable doc health summary:
+
+```
+Documentation health:
+  README.md       [status] ([details])
+  ARCHITECTURE.md [status] ([details])
+  CONTRIBUTING.md [status] ([details])
+  CLAUDE.md       [status] ([details])
+  CHANGELOG.md    [status] ([details])
+  TODOS.md        [status] ([details])
+  VERSION         [status] ([details])
+```
+
+Where status is one of:
+- Updated — with description of what changed
+- Current — no changes needed
+- Voice polished — wording adjusted
+- Not bumped — user chose to skip
+- Already bumped — version was set earlier
+- Skipped — file does not exist
+
+Store this summary for inclusion in HANDOFF.md (Step 7) and the final commit (Step 8).
+
+---
+
+## Step 6: Update progress.md
 
 progress.md is the **running story** of the project. It owns the narrative:
 decisions, reasoning, mistakes, open questions, ideas, and technical debt.
@@ -328,8 +595,9 @@ Be honest and specific. Examples:
 - **Populate from real data** — run `git log`, `git diff`, review conversation history; don't guess
 - **Don't duplicate HANDOFF.md content** — progress.md does NOT need branch status, PR status, next steps, or blockers. Those live in HANDOFF.md.
 - **Commit progress.md** as part of the handoff commit
+- **Include doc sync results** — if Step 5 ran, add the doc health summary to the session log
 
-After updating progress.md, commit it:
+After updating progress.md, stage it:
 ```bash
 git add progress.md
 ```
@@ -338,7 +606,7 @@ Then continue to write the handoff document.
 
 ---
 
-## Step 6: Write the Handoff Document
+## Step 7: Write the Handoff Document
 
 HANDOFF.md is the **current state snapshot** — a status board for the next session
 to pick up immediately. It owns: branch status, PR status, blockers, and next steps.
@@ -363,6 +631,10 @@ Create or overwrite `.github/HANDOFF.md`:
 - **Tests:** [passing/failing/not run — actually run them if possible]
 - **Build:** [passing/failing/not checked]
 - **Deploy status:** [deployed/not deployed/N/A]
+
+## Documentation Status
+[Include the doc health summary from Step 5.9 if doc sync ran.
+If doc sync was skipped, write "Documentation sync: skipped (on base branch)"]
 
 ## Outstanding Pull Requests
 [For EACH open PR:]
@@ -397,7 +669,9 @@ For the full story — decisions, reasoning, mistakes — see progress.md.]
 
 ---
 
-## Step 7: Commit and Push the Handoff Doc
+## Step 8: Commit, Push & Update PR
+
+### Commit the handoff:
 
 ```bash
 git add .github/HANDOFF.md progress.md
@@ -408,9 +682,58 @@ git push
 Use the actual phase in the commit message: "planning", "implementation", "QA",
 or "end of session".
 
+If documentation files were modified in Step 5, include them in the commit:
+```bash
+git add [each modified doc file by name]
+git add .github/HANDOFF.md progress.md
+git commit -m "docs: checkpoint after [phase] — [date]"
+git push
+```
+
+### Update PR body (if a PR exists):
+
+If an open PR exists for the current branch AND Step 5 modified documentation:
+
+1. Read the existing PR body:
+
+**If GitHub:**
+```bash
+gh pr view --json body -q .body > /tmp/pr-body-$$.md
+```
+
+**If GitLab:**
+```bash
+glab mr view -F json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('description',''))" > /tmp/pr-body-$$.md
+```
+
+2. If the body already contains a `## Documentation` section, replace it. Otherwise append it.
+
+3. The Documentation section should include a **doc diff preview** — for each file modified,
+   describe what specifically changed.
+
+4. Write the updated body back:
+
+**If GitHub:**
+```bash
+gh pr edit --body-file /tmp/pr-body-$$.md
+```
+
+**If GitLab:**
+```bash
+glab mr update -d "$(cat <<'MRBODY'
+<paste the file contents here>
+MRBODY
+)"
+```
+
+5. Clean up: `rm -f /tmp/pr-body-$$.md`
+
+6. If no PR/MR exists: skip with "No PR/MR found — skipping body update."
+7. If update fails: warn "Could not update PR/MR body — documentation changes are in the commit." and continue.
+
 ---
 
-## Step 8: Final Verification
+## Step 9: Final Verification
 
 Run one final check:
 
@@ -433,6 +756,7 @@ Present the final summary to the user:
 >
 > - [N] commits pushed across [N] branches
 > - [N] open PRs documented
+> - Documentation: [sync status — updated N files / skipped / all current]
 > - Handoff doc: .github/HANDOFF.md
 > - [Any warnings about uncommitted/unpushed work]
 >
@@ -442,6 +766,7 @@ Present the final summary to the user:
 
 ## Important Rules
 
+### Git & State
 - **Trust nothing to memory.** Every claim in the handoff doc must come from
   actual git commands, not from conversation context. Run `git log`, `git diff`,
   `gh pr list` — don't summarize from what you "remember."
@@ -456,6 +781,22 @@ Present the final summary to the user:
   doesn't rebuild work that already exists.
 - **Actually run tests/build if possible.** Don't write "tests: not checked" if
   you can run them in 30 seconds.
+- **Stage files by name, never `git add -A`.** Except in Step 1 where the user
+  explicitly chose to commit all changes.
+
+### Documentation
+- **Read before editing.** Always read the full content of a file before modifying it.
+- **Never clobber CHANGELOG.** Polish wording only. Never delete, replace, or regenerate entries.
+- **Never bump VERSION silently.** Always ask. Even if already bumped, check scope coverage.
+- **Be explicit about what changed.** Every edit gets a one-line summary.
+- **Generic heuristics, not project-specific.** The audit checks work on any repo.
+- **Discoverability matters.** Every doc file should be reachable from README or CLAUDE.md.
+- **Voice: friendly, user-forward, not obscure.** Write like you're explaining to a smart person
+  who hasn't seen the code.
+- **Doc sync is lightweight.** Prefer speed over exhaustiveness. Skip ambiguous changes.
+- **Batch AskUserQuestion calls where possible.** Don't ask 10 questions one at a time.
+
+### Handoff Structure
 - **Never duplicate between files.** progress.md owns the story (decisions,
   narrative, mistakes, ideas, debt). HANDOFF.md owns the snapshot (state, PRs,
   blockers, next steps). If information belongs in one, don't put it in the other.
