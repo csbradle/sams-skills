@@ -209,11 +209,59 @@ If any branch is still not synced, flag it with a WARNING in the handoff doc.
 
 ## Step 4: Check for Hidden/Missed Files
 
+### Step 4.0: Force-add Claude Code session artifacts
+
+Claude Code stores plans, memories, and other session artifacts in `.claude/`
+which is commonly gitignored. These MUST be committed or they'll be silently
+lost when switching machines.
+
+```bash
+echo "=== CLAUDE CODE SESSION ARTIFACTS ==="
+# Check for plan files (created by plan mode)
+PLAN_FILES=$(find .claude/plans -name '*.md' 2>/dev/null)
+# Check for other important .claude files (not settings/credentials)
+OTHER_CLAUDE=$(find .claude -name '*.md' -not -path '*/node_modules/*' 2>/dev/null)
+
+if [ -n "$PLAN_FILES" ] || [ -n "$OTHER_CLAUDE" ]; then
+  echo "Found Claude Code session files that would be lost:"
+  [ -n "$PLAN_FILES" ] && echo "$PLAN_FILES"
+  [ -n "$OTHER_CLAUDE" ] && echo "$OTHER_CLAUDE"
+else
+  echo "No Claude Code session artifacts found."
+fi
+```
+
+If any `.claude/plans/*.md` or other important `.claude/*.md` files exist:
+1. **Force-add them** with `git add -f` — this overrides .gitignore for these specific files
+2. They'll be included in the handoff commit in Step 8
+3. Do NOT ask the user — always commit these. Plans are critical context that
+   cannot be reconstructed.
+
+```bash
+# Force-add plan files (overrides .gitignore)
+if [ -n "$PLAN_FILES" ]; then
+  echo "Force-adding plan files..."
+  git add -f .claude/plans/*.md
+fi
+# Force-add any other .claude markdown docs
+if [ -n "$OTHER_CLAUDE" ]; then
+  echo "Force-adding Claude session docs..."
+  git add -f $(find .claude -name '*.md' -not -path '*/node_modules/*' 2>/dev/null)
+fi
+```
+
+**Why this exists:** `.claude/` is gitignored by default. Plan files created
+during plan mode live there. If they aren't force-added, they silently vanish
+when you switch machines — the decisions, architecture, and reviewed plans are
+gone. This has caused real context loss on this project.
+
+### Step 4.1: Check for other gitignored files
+
 Look for files that might be gitignored but contain important work:
 
 ```bash
 echo "=== GITIGNORED BUT POSSIBLY IMPORTANT ==="
-git ls-files --others --ignored --exclude-standard | grep -iE '\.(md|txt|json|yaml|yml|toml|env|sql|sh|plan)$' | grep -viE '(node_modules|\.next|dist|build|vendor|__pycache__|\.cache)' | head -30
+git ls-files --others --ignored --exclude-standard | grep -iE '\.(md|txt|json|yaml|yml|toml|env|sql|sh|plan)$' | grep -viE '(node_modules|\.next|dist|build|vendor|__pycache__|\.cache|\.claude)' | head -30
 
 echo "=== LARGE UNTRACKED FILES ==="
 git ls-files --others --exclude-standard --directory | head -20
@@ -675,6 +723,7 @@ For the full story — decisions, reasoning, mistakes — see progress.md.]
 
 ```bash
 git add .github/HANDOFF.md progress.md
+# Include force-added Claude session artifacts from Step 4.0 (if any were staged)
 git commit -m "docs: checkpoint after [phase] — [date]"
 git push
 ```
@@ -686,6 +735,7 @@ If documentation files were modified in Step 5, include them in the commit:
 ```bash
 git add [each modified doc file by name]
 git add .github/HANDOFF.md progress.md
+# Note: .claude/plans/*.md files were already force-staged in Step 4.0
 git commit -m "docs: checkpoint after [phase] — [date]"
 git push
 ```
