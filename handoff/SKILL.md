@@ -1,6 +1,6 @@
 ---
 name: handoff
-version: 3.0.0
+version: 3.1.0
 description: |
   Checkpoint, sync, and document: captures current state of work, ensures all
   code/files are committed and pushed to GitHub, audits and updates all project
@@ -123,6 +123,35 @@ Store the detected base branch for use in Step 5 (Documentation Sync).
 
 ## Step 1: Ensure Everything Is Committed
 
+### Step 1.0: Always commit documentation files (every run, every branch)
+
+**Hard rule — a handoff NEVER leaves documentation uncommitted.** Before the
+choice below, unconditionally stage and commit every changed or untracked
+documentation file. This runs on every branch (including the base branch) and
+regardless of which option the user picks for the remaining changes. Do NOT ask
+first — docs always get committed.
+
+Documentation = any modified/untracked file matching `*.md`, `*.mdx`, `*.rst`,
+`*.txt`, anything under a `docs/` directory, plus `progress.md`,
+`.github/HANDOFF.md`, `README*`, `CHANGELOG*`, `DESIGN*`, `TODOS*`, `LICENSE*`.
+
+```bash
+DOC_PATTERN='(\.(md|mdx|rst|txt)$|(^|/)docs/|(^|/)(README|CHANGELOG|DESIGN|TODOS|LICENSE)[^/]*$|(^|/)progress\.md$|(^|/)HANDOFF\.md$)'
+DOC_FILES=$( { git diff --name-only; git diff --cached --name-only; git ls-files --others --exclude-standard; } \
+  | sort -u | grep -iE "$DOC_PATTERN" | grep -viE '(node_modules|/dist/|/build/|/vendor/)' )
+if [ -n "$DOC_FILES" ]; then
+  echo "$DOC_FILES" | while IFS= read -r f; do [ -n "$f" ] && git add -- "$f"; done
+  git commit -m "docs: handoff — commit documentation ($(date +%F))" && echo "Committed docs:" && echo "$DOC_FILES"
+else
+  echo "No uncommitted documentation files."
+fi
+```
+
+The AskUserQuestion below now covers only the remaining **non-documentation**
+(code) changes.
+
+### Step 1.1: Handle remaining (non-documentation) changes
+
 Check if there are uncommitted changes. If there are:
 
 1. Show the user exactly what's uncommitted (files + brief diff summary)
@@ -135,7 +164,8 @@ Check if there are uncommitted changes. If there are:
 >
 > A) Commit all changes with a handoff message (recommended)
 > B) Commit specific files only (I'll tell you which)
-> C) Leave uncommitted (I'll note them in the handoff doc)
+> C) Leave the remaining non-doc changes uncommitted (docs were already
+>    committed in Step 1.0; I'll note the rest in the handoff doc)
 
 If A: Stage all changes and commit:
 ```bash
@@ -785,6 +815,27 @@ MRBODY
 
 ## Step 9: Final Verification
 
+### Step 9.0: Documentation safety net
+
+Guarantee the "commit docs every time" property even if an earlier step was
+skipped (e.g., the Step 5 doc-sync gate on the base branch, or new doc edits
+made in Steps 5–7). Re-scan for any remaining uncommitted documentation files;
+commit and push them:
+
+```bash
+DOC_PATTERN='(\.(md|mdx|rst|txt)$|(^|/)docs/|(^|/)(README|CHANGELOG|DESIGN|TODOS|LICENSE)[^/]*$|(^|/)progress\.md$|(^|/)HANDOFF\.md$)'
+REMAINING_DOCS=$( { git diff --name-only; git diff --cached --name-only; git ls-files --others --exclude-standard; } \
+  | sort -u | grep -iE "$DOC_PATTERN" | grep -viE '(node_modules|/dist/|/build/|/vendor/)' )
+if [ -n "$REMAINING_DOCS" ]; then
+  echo "$REMAINING_DOCS" | while IFS= read -r f; do [ -n "$f" ] && git add -- "$f"; done
+  git commit -m "docs: handoff safety-net — commit remaining documentation ($(date +%F))"
+  git push 2>/dev/null || echo "Push skipped/failed — flag in final summary."
+  echo "Safety net committed: $REMAINING_DOCS"
+else
+  echo "Documentation safety net: nothing left uncommitted."
+fi
+```
+
 Run one final check:
 
 ```bash
@@ -817,6 +868,10 @@ Present the final summary to the user:
 ## Important Rules
 
 ### Git & State
+- **Documentation is always committed.** Doc files (`*.md`, `docs/**`,
+  README/CHANGELOG/DESIGN/TODOS, `progress.md`, `.github/HANDOFF.md`) are
+  auto-committed every run in Step 1.0 and re-checked in Step 9.0 — a handoff
+  never leaves docs uncommitted, on any branch, regardless of the Step 1 choice.
 - **Trust nothing to memory.** Every claim in the handoff doc must come from
   actual git commands, not from conversation context. Run `git log`, `git diff`,
   `gh pr list` — don't summarize from what you "remember."
