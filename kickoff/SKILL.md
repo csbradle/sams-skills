@@ -1,10 +1,13 @@
 ---
 name: kickoff
-version: 2.1.0
+version: 2.3.0
 description: |
-  Product-level status briefing: plain-language summary of where the project stands,
-  what phase we're in, what's left to do, and what to work on next. Written for
-  a non-technical product manager — leads with context and goals, not git details.
+  Product-level status briefing in PLAIN ENGLISH. Written for a non-technical
+  founder who doesn't read code, doesn't know component names, and doesn't want
+  to be told what something is — wants to know what it DOES, in matter-of-fact
+  human terms. No code names, no version numbers, no acronyms, no internal
+  task IDs. Every line answers "what does this mean for the actual product /
+  what would I, as a user, see or do differently?"
   Use when: "kickoff", "what's going on", "where are we", "what's the status",
   "catch me up", "what's next", "wtf is going on", or at the start of any session.
 allowed-tools:
@@ -138,7 +141,7 @@ Read these files if they exist (use the Read tool for each):
    This is the single most important context file for understanding where the project stands.
 2. `.github/HANDOFF.md` — Previous session's handoff document
 3. `CLAUDE.md` — Project instructions and context
-4. `TODOS.md` — Outstanding tasks
+4. **The durable backlog — THE authoritative to-do source.** Don't assume it's `TODOS.md` at the root; find it (`TODOS.md`, `TODO.md`, `docs/TODOS.md`, or search `docs/**/TODOS.md`). If it has a curated "OPEN BACKLOG" / "living" section, **read that section in full** — it is the single source of truth for what's left, maintained by `/handoff`. This OUTRANKS HANDOFF.md's "Next Steps," which is only a 1-3 item snapshot of the immediate next actions.
 5. `CHANGELOG.md` — Recent changes (last 50 lines)
 6. `README.md` — Project overview (first 80 lines)
 7. Any plan files found: `find . -maxdepth 3 -name "*.plan.md" -o -name "PLAN.md" | head -5`
@@ -201,6 +204,60 @@ If CLAUDE.md has deploy commands, run the status check:
 echo "=== OPEN ISSUES ==="
 gh issue list --state open --json number,title,labels,assignees,url --limit 15 2>/dev/null || echo "No issues or gh not available"
 ```
+
+---
+
+## Step 0.5: HARD RULE — Translate everything into plain English before writing
+
+**Before you write a single line of the briefing, force yourself through this filter for every fact you intend to surface.** This is the single most important rule in this skill. The user has explicitly said: "I don't want code names. I don't want technical terms. I want, practically, what does this do."
+
+### The Translation Test
+
+For every item you're about to mention, answer in your own head:
+1. **What does this DO for the user, in their actual life?** (Not "what is it.")
+2. **What would the user SEE or BE ABLE TO DO differently** because of this?
+3. **If a friend who has never opened the codebase asked "what's that?", how would I explain it without using the word itself?**
+
+If you can't answer all three, you don't understand the item well enough to mention it. Read further into the docs until you do, OR drop the item from the briefing.
+
+### Banned vocabulary (NEVER use these in a kickoff briefing)
+
+- **Internal task IDs / code names**: `T1.A`, `T2.B`, `Phase 6`, `PR #25`, `v0.3.0`, `Tier 1`. The user doesn't track these and they convey nothing.
+- **Tool / library / service names** unless they're consumer-facing brands the user already uses: `NSSM`, `LlamaParse`, `rapidfuzz`, `sqlite`, `MCP`, `OAuth`, `ReadModel`, `ChromaFs`. If the user installs / configures / pays for it directly, you can mention it by its everyday name. Otherwise, describe what it DOES.
+- **Internal file/path/folder names** as if they're concepts: `_unassigned/`, `daily brief`, `reconcile loop`, `tier router`, `insight extractor`. Translate to "the inbox of files the system couldn't sort", "the morning summary email", "the step where the system updates the brain after you approve things."
+- **Version numbers, commit hashes, branch names, test counts.** Useless to the user.
+- **Architectural phase / sprint nomenclature**: "substrate", "scaffolding", "thin slice", "carry-forward", "live wire", "dormant", "no-op", "stub". Either say what it does or don't say it.
+- **CLI commands** as if they're features: `brain-kit ingest plan`, `index rebuild --full`. Describe the action: "I can do a dry-run cost estimate before bulk-importing files."
+
+### Translation examples (study these — they are the standard)
+
+| ❌ Jargon | ✅ Plain English |
+|---|---|
+| "T1.A ambiguity-prompt UX shipped as v0.3.0" | "When the system can't figure out which deal a file belongs to, it now asks you in your morning summary instead of dumping it in a hidden folder." |
+| "NSSM scheduler not yet installed" | "The thing that watches your email inbox in the background isn't running on your laptop yet — you have a step-by-step guide to turn it on." |
+| "Phase 6 read-model thin slice" | "Make the system answer questions faster by storing things in a structured database instead of re-reading every file each time." |
+| "Run `brain-kit index rebuild --full`" | "Re-scan everything in the brain so it's caught up with the latest changes — one command, takes a minute." |
+| "Cross-entity ripple on file ingest (T1.B)" | "When you upload a file with your opinion about a counterparty, the system doesn't just store the new note — it updates your existing opinion file too, so the latest belief wins." |
+| "Visibility filter is a no-op for v1" | "You're the only person querying the brain right now, so the access-control machinery exists but isn't doing anything yet. It kicks in the day you let someone else query." |
+| "1995 tests passing on main" | (drop entirely — user does not care) |
+| "MCP boot speed is 36s, applied MCP_TIMEOUT=60000 workaround" | "When you open Claude Desktop, it takes ~30 seconds for the brain to be ready. Annoying but works. Real fix is on the to-do list." |
+
+### Naming products / capabilities by what they do
+
+When referring to a feature for the second or third time, use a SHORT plain-English handle, not the code name:
+
+- "the morning summary" (not "daily brief" / "reconcile loop")
+- "the email watcher" (not "Graph adapter" / "scheduler")
+- "the file inbox" (not "drop-zone" / "_inbox/files")
+- "the meeting transcript pipe" (not "Fireflies adapter")
+- "the Claude Desktop tools" (not "MCP tools")
+- "the fast database for the brain" (not "ReadModel" / "sqlite index")
+
+If a thing is genuinely novel and needs a name the user will remember, INVENT a friendly handle ("the routing inbox", "the morning approval list") and use it consistently.
+
+### Single test before sending
+
+Re-read your draft. If a non-technical PM at a non-tech company could read it and not stop on a single word — ship it. If they'd stop and say "what does that mean?" on any line, rewrite that line.
 
 ---
 
@@ -302,10 +359,21 @@ Always include:
 
 ```markdown
 ### To-Do List
-[Compiled from progress.md outstanding TODOs, HANDOFF.md next steps,
-TODOS.md, open GitHub issues, and anything inferred from the codebase.
-Group by priority, not by source. Preserve the dates from progress.md
-so the reader can see when each item was added and how long it's been open.]
+[**Source the to-do list from the durable backlog FIRST** (the OPEN BACKLOG / living
+section found in Step 0F), then fold in progress.md outstanding TODOs, HANDOFF.md next
+steps, open GitHub issues, and anything inferred from the codebase. Group by priority,
+not by source. Preserve the dates so the reader sees when each item was added and how
+long it's been open.
+
+**ANTI-RECENCY-BIAS RULE — this is the whole point of the briefing.** Do NOT surface only
+recently-touched work. Read the ENTIRE open backlog and surface every open item, even ones
+untouched for weeks. An open backlog item that hasn't been mentioned in the last few
+sessions is "aging / long-deferred" — flag it as such and surface it, NEVER drop it. The
+common failure is leaning on HANDOFF.md's recent "Next Steps" snapshot and silently
+omitting older initiatives that still have open plans. Show the union of the full backlog +
+recent activity, not the freshest slice. If you find a big initiative with a written plan
+that hasn't appeared in recent handoffs, that's a recency-bias miss — surface it
+prominently.]
 
 **Finish current work:**
 - [ ] (added YYYY-MM-DD) [Specific next action to complete in-progress work]
@@ -369,6 +437,8 @@ merge" prevents the catastrophic failure of rebuilding existing work.
 
 ## Important Rules
 
+- **PLAIN ENGLISH OR DROP THE LINE.** No code names, no internal task IDs (T1.A, Phase 6, PR #25), no version numbers, no tool/library names the user doesn't directly use. If you can't describe what a thing DOES in matter-of-fact human terms, drop it from the briefing. See Step 0.5 (Translation Test + banned vocabulary) — that section is the standard, not an aspiration.
+
 - **Lead with the product, not the plumbing.** The first thing the user reads
   should be what we're building and where we are — not branch names, commit
   hashes, or git status. Technical details support the narrative; they don't
@@ -385,6 +455,12 @@ merge" prevents the catastrophic failure of rebuilding existing work.
 - **Run real commands, don't guess.** Every claim must come from actual git/gh
   commands. But present the *meaning*, not the raw output.
 
+- **The durable backlog is the source of truth — fight recency bias.** Read the full
+  OPEN BACKLOG / living section of the durable to-do file and surface EVERY open item,
+  including ones untouched for weeks (flag them as aging). Never let the recent HANDOFF
+  "Next Steps" snapshot become the de-facto list — that's how long-deferred initiatives
+  silently disappear. If a written plan exists but hasn't appeared in recent handoffs,
+  surface it prominently as a likely recency-bias miss.
 - **Read progress.md FIRST.** This is the running session log. It has the
   project vision, outstanding TODOs, open questions, decision history, and
   future ideas. Surface all of these in the briefing. If progress.md doesn't

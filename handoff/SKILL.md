@@ -1,6 +1,6 @@
 ---
 name: handoff
-version: 3.1.0
+version: 3.2.0
 description: |
   Checkpoint, sync, and document: captures current state of work, ensures all
   code/files are committed and pushed to GitHub, audits and updates all project
@@ -304,13 +304,49 @@ If important-looking files are gitignored (plans, configs, docs, SQL migrations)
 
 ---
 
+## Step 5.0: Backlog Reconciliation (ALWAYS RUNS — never gated)
+
+**This step runs every handoff, on every branch, including docs-only sessions on the base branch.** It is deliberately OUTSIDE the Step 5 gate below. The durable backlog is the single source of truth for what's left to do; if it only got maintained on code branches, docs-only sessions would silently let open items age out — which is exactly the recency-bias failure this step exists to prevent.
+
+### Step 5.0.1: Find the durable backlog
+
+Don't assume it's `TODOS.md` at the repo root — many projects keep it elsewhere:
+
+```bash
+echo "=== DURABLE BACKLOG FILE ==="
+BACKLOG=""
+for cand in TODOS.md TODO.md docs/TODOS.md docs/TODO.md; do
+  [ -f "$cand" ] && BACKLOG="$cand" && break
+done
+# fall back to a search under docs/ if not found at the common spots
+if [ -z "$BACKLOG" ]; then
+  BACKLOG=$(find . -maxdepth 3 -iname 'TODOS.md' -o -iname 'TODO.md' 2>/dev/null \
+    | grep -viE '(node_modules|/dist/|/build/|/vendor/|\.git/)' | head -1)
+fi
+echo "Backlog: ${BACKLOG:-NONE FOUND}"
+```
+
+If no backlog file exists, note it and skip to Step 6 (don't invent one unless the project clearly wants one — ask via AskUserQuestion only if the user mentioned tracking to-dos).
+
+### Step 5.0.2: Reconcile the backlog with this session
+
+If the backlog has a curated "living"/"open backlog" section (a top section listing currently-open items), maintain THAT section. Otherwise maintain the whole file. Three rules, applied every time:
+
+1. **Mark done.** Any open item this session completed → check it off (or move to a Completed/Done area). Be specific; only mark items with real evidence from this session's work.
+2. **Add new.** Any newly-discovered work, deferral, or decision from this session that isn't already listed → add it with a one-line plain-English description, a priority, and a pointer to where the detail lives (a design doc, a dated journal entry, or progress.md).
+3. **Never silently drop an open item.** Items not touched this session STAY open. Do not delete them, do not let them fall off because they weren't recent. If an item is now obsolete, mark it explicitly (superseded / abandoned) with a one-line reason — never just remove it.
+
+Stage the backlog file by name (it's a doc, so Step 1.0 likely already committed it — re-staging is harmless).
+
+---
+
 ## Step 5: Documentation Sync
 
 **Gate:** This step only runs if BOTH conditions are true:
 1. The current branch is NOT the base branch (main/master)
 2. Code changes exist on the branch (not docs-only)
 
-If either condition fails, print "Documentation sync: skipped (on base branch or no code changes)" and proceed to Step 6.
+If either condition fails, print "Documentation sync: skipped (on base branch or no code changes)" and proceed to Step 6. **Note:** the durable backlog was already reconciled in Step 5.0 above (which is NOT gated), so skipping here never skips backlog maintenance.
 
 This step ensures every documentation file in the project is accurate, up to date,
 and consistent with the code changes on the branch.
@@ -480,9 +516,9 @@ After auditing each file individually, do a cross-doc consistency pass:
 
 ---
 
-### Step 5.7: TODOS.md Cleanup
+### Step 5.7: TODOS.md Cleanup (code-diff-driven extras)
 
-If TODOS.md does not exist, skip this sub-step.
+The durable backlog was already reconciled in Step 5.0 (always-runs). This sub-step only adds code-branch-specific cleanup driven by the diff. If TODOS.md does not exist, skip this sub-step.
 
 1. **Completed items not yet marked:** Cross-reference the diff against open TODO items. If a
    TODO is clearly completed by the changes in this branch, move it to the Completed section
@@ -733,11 +769,16 @@ and why it wasn't committed. If everything is pushed, say "All work is in GitHub
 [Anything broken, blocked, or waiting on external input.
 If none: "No known blockers."]
 
-## Next Steps (Priority Order)
+## Next Steps (this session's immediate next 1-3 actions)
 1. [Most important next action — be specific]
 2. [Second priority]
 3. [Third priority]
 [Include: merge outstanding PRs, address review feedback, continue feature work, etc.]
+
+**These are only the immediate next actions — NOT the full to-do list.** The complete open
+backlog lives in the durable backlog file (the one found in Step 5.0, e.g.
+`docs/design/TODOS.md` → its "OPEN BACKLOG" section). Always include this pointer with the
+file's actual path so the next session reads the whole list, not just this snapshot.
 
 ## Quick Context
 [2-3 sentences max. Only things the next session needs that aren't obvious
@@ -902,6 +943,10 @@ Present the final summary to the user:
 - **Batch AskUserQuestion calls where possible.** Don't ask 10 questions one at a time.
 
 ### Handoff Structure
+- **The backlog is maintained every session (Step 5.0), never gated.** Mark done, add new,
+  and NEVER let an open item drop just because it wasn't touched recently. The HANDOFF.md
+  "Next Steps" is a 1-3 item snapshot, not the backlog — always point at the durable backlog
+  file so the next session sees the full open list.
 - **Never duplicate between files.** progress.md owns the story (decisions,
   narrative, mistakes, ideas, debt). HANDOFF.md owns the snapshot (state, PRs,
   blockers, next steps). If information belongs in one, don't put it in the other.
