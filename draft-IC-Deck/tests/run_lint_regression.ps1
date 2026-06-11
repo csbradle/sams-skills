@@ -53,5 +53,27 @@ Check "T9d AcceptDrift after fix" (RunLint @("-DeckPath", "$tmp\clean.html", "-A
 Check "T9e steady state" (RunLint @("-DeckPath", "$tmp\clean.html", "-UpdateHash")) 0 0 0
 Check "T10 ReconcileMd w/o ledger fails closed" (RunLint @("-DeckPath", "$tmp\clean.html", "-ReconcileMd", "-MdPath", "$tmp\clean.html")) 2 0 0
 
+# codex-round fixtures (2026-06-11 round 2)
+[IO.File]::WriteAllText("$tmp\x1.html", '<html><body><p>[needs&#32;source] and lore&#109; and T&#66;D</p></body></html>', $enc)
+Check "X1 numeric-entity gap evasion" (RunLint @("-DeckPath", "$tmp\x1.html")) 1 1 0
+[IO.File]::WriteAllText("$tmp\x2.html", '<html><body><span data-claim="s1-c001">$500M</span></body></html>', $enc)
+Check "X2 value drift vs ledger blocks" (RunLint @("-DeckPath", "$tmp\x2.html", "-LedgerPath", "$tmp\ledger.json")) 1 0 0
+[IO.File]::WriteAllText("$tmp\x3.html", '<html><body><!-- data-claim="s1-c001" --><p>text</p></body></html>', $enc)
+Check "X3 comment data-claim does not satisfy presence" (RunLint @("-DeckPath", "$tmp\x3.html", "-LedgerPath", "$tmp\ledger.json")) 1 0 0
+[IO.File]::WriteAllText("$tmp\dupledger.json", '{"claims":[{"id":"s1-c001","value":"$5M","status":"checked"},{"id":"s1-c001","value":"$6M","status":"tbu"}]}', $enc)
+[IO.File]::WriteAllText("$tmp\x4.html", '<html><body><span data-claim="s1-c001">$5M</span></body></html>', $enc)
+Check "X4 duplicate ledger ids block" (RunLint @("-DeckPath", "$tmp\x4.html", "-LedgerPath", "$tmp\dupledger.json")) 1 0 0
+# X5: AcceptDrift must NOT re-baseline past other blockers
+[IO.File]::WriteAllText("$tmp\x5.html", '<html><body><p>clean</p></body></html>', $enc)
+RunLint @("-DeckPath", "$tmp\x5.html", "-UpdateHash") | Out-Null
+[IO.File]::WriteAllText("$tmp\x5.html", '<html><body><p>edited [needs source]</p></body></html>', $enc)
+Check "X5a AcceptDrift w/ other blockers still exits 1" (RunLint @("-DeckPath", "$tmp\x5.html", "-AcceptDrift")) 1 1 0
+Check "X5b ...and did not re-baseline (still drifts)" (RunLint @("-DeckPath", "$tmp\x5.html", "-UpdateHash")) 1 1 0
+[IO.File]::WriteAllText("$tmp\x5.html", '<html><body><p>edited clean</p></body></html>', $enc)
+Check "X5c AcceptDrift on otherwise-clean run passes" (RunLint @("-DeckPath", "$tmp\x5.html", "-AcceptDrift")) 0 0 0
+# X6: span keeping ledger value passes (no false drift)
+[IO.File]::WriteAllText("$tmp\x6.html", '<html><body><span data-claim="s1-c001">$5M</span></body></html>', $enc)
+Check "X6 matching span value passes" (RunLint @("-DeckPath", "$tmp\x6.html", "-LedgerPath", "$tmp\ledger.json")) 0 0 0
+
 Remove-Item -Recurse -Force $tmp -Confirm:$false -ErrorAction SilentlyContinue
 if ($script:fails -gt 0) { "RESULT: $($script:fails) FAILURES"; exit 1 } else { "RESULT: all pass"; exit 0 }

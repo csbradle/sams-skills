@@ -118,6 +118,9 @@ try {
     # Scan B -- normalized catch-all: strips ALL tags to nothing and collapses whitespace,
     # so "[needs <b></b>source]" and entity-split variants are caught (review H3).
     $gapNorm = [regex]::Replace($gapLayer, '(?s)<[^>]*>', '')
+    # Decode numeric character references so &#32; / &#x6D; style encoding cannot hide a tag (codex #1).
+    $gapNorm = [regex]::Replace($gapNorm, '&#(\d+);', { param($m) [string][char][int]$m.Groups[1].Value })
+    $gapNorm = [regex]::Replace($gapNorm, '&#[xX]([0-9a-fA-F]+);', { param($m) [string][char][Convert]::ToInt32($m.Groups[1].Value, 16) })
     $gapNorm = $gapNorm.Replace('&nbsp;', ' ').Replace([string]$nbsp, ' ')
     $gapNorm = [regex]::Replace($gapNorm, '\s+', ' ')
     $normPatterns = @('\[needs source', '\[Commentary TBU')
@@ -169,9 +172,31 @@ try {
         $result.profile = "full"
         $ledger = (Read-DeckText $LedgerPath) | ConvertFrom-Json
         if ($null -eq $ledger.claims) { throw "ledger has no 'claims' array: $LedgerPath" }
-        foreach ($c in @($ledger.claims)) { if ($c.status -ne 'dropped') { $ledgerIds[$c.id] = $c } }
+        foreach ($c in @($ledger.claims)) {
+            if ($c.status -ne 'dropped') {
+                # Duplicate IDs are a blocking defect, not last-write-wins (codex #5).
+                if ($ledgerIds.ContainsKey($c.id)) { $result.ledger_mismatches += [ordered]@{ kind = 'duplicate-ledger-id'; id = $c.id } }
+                $ledgerIds[$c.id] = $c
+            }
+        }
+        # Scan the masked text (comments/scripts removed) so a data-claim inside an HTML
+        # comment cannot satisfy presence checks (codex #4).
         $htmlIds = @{}
-        foreach ($m in [regex]::Matches($html, 'data-claim="([^"]+)"')) { $htmlIds[$m.Groups[1].Value] = $true }
+        foreach ($m in [regex]::Matches($maskedBase, 'data-claim="([^"]+)"')) { $htmlIds[$m.Groups[1].Value] = $true }
+        # VALUE-DRIFT CHECK (codex #3 — pulled forward from Stage 2): the rendered text inside
+        # each data-claim span must equal the ledger's display/value verbatim. A span keeping
+        # its ID while its number changes is exactly the tamper class the ledger exists to stop.
+        foreach ($sm in [regex]::Matches($maskedBase, '(?s)<span\b[^>]*data-claim="([^"]+)"[^>]*>(.*?)</span>')) {
+            $cid = $sm.Groups[1].Value
+            $inner = [regex]::Replace($sm.Groups[2].Value, '(?s)<[^>]*>', '').Trim()
+            $entry = $ledgerIds[$cid]
+            if ($null -ne $entry) {
+                $disp = if ($null -ne $entry.display) { [string]$entry.display } else { [string]$entry.value }
+                if ($inner -ne $disp -and $inner -ne [string]$entry.value) {
+                    $result.ledger_mismatches += [ordered]@{ kind = 'value-drift'; id = $cid; rendered = $inner; ledger = $disp }
+                }
+            }
+        }
         foreach ($id in $htmlIds.Keys) {
             $baseId = ($id -split '-title$|-takeaway$')[0]
             if (-not $ledgerIds.ContainsKey($id) -and -not $ledgerIds.ContainsKey($baseId)) {
@@ -261,7 +286,8 @@ try {
     $pathKey = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($resolved))).Replace('-', '').Substring(0, 32)
     $hashFile = Join-Path $hashDir "$pathKey.sha256"
     $legacyHashFile = "$DeckPath.lastcheck.sha256"
-    $sha = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($html))).Replace('-', '')
+    # Hash RAW BYTES, not decoded text — encoding-only edits must also count as drift (codex #8).
+    $sha = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([IO.File]::ReadAllBytes($DeckPath))).Replace('-', '')
     $baseline = $null
     if (Test-Path -LiteralPath $hashFile) { $baseline = (Read-DeckText $hashFile).Trim() }
     elseif (Test-Path -LiteralPath $legacyHashFile) { $baseline = (Read-DeckText $legacyHashFile).Trim() }
@@ -275,10 +301,10 @@ try {
     $result.flag_findings = @($result.orphan_soft).Count + @($result.slop_hits).Count
     $result.pass = ($result.blocking_findings -eq 0)
 
-    # Baseline writes: ONLY when the deck passes (or drift was explicitly accepted after a
-    # logged user waiver). A failing run must never re-baseline -- that would launder
-    # hand-edit evidence on retry (review H5/T2).
-    if (($UpdateHash -and $result.pass) -or $AcceptDrift) {
+    # Baseline writes: ONLY when the run is otherwise clean. -AcceptDrift waives drift alone;
+    # it must not re-baseline past OTHER blocking findings (codex #6), and a failing run must
+    # never re-baseline -- that would launder hand-edit evidence on retry (review H5/T2).
+    if (($UpdateHash -or $AcceptDrift) -and $result.pass) {
         Write-Utf8 $hashFile $sha
         if (Test-Path -LiteralPath $legacyHashFile) { Remove-Item -LiteralPath $legacyHashFile -Force -Confirm:$false }
     }
