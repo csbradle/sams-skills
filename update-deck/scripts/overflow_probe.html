@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  Overflow probe for /update-deck. Loads a target deck in an iframe at 1920x1080,
+  measures every .slide element, and prints a JSON report into <pre id="result">.
+  Pass the target deck URL via ?deck=<file-url>. Default is the slot the runner
+  fills via PowerShell text substitution before launching headless Chrome.
+
+  Usage: see scripts/run_overflow_check.ps1
+-->
+<html><head><meta charset="utf-8"><title>probe-init</title>
+<style>
+  html,body{margin:0;padding:0;background:#1a1a1a;color:#fff;font-family:monospace}
+  iframe{width:1920px;height:1080px;border:0;display:block}
+  pre{padding:12px;white-space:pre-wrap;word-break:break-word}
+</style>
+</head>
+<body>
+<iframe id="f" src="__DECK_URL__"></iframe>
+<pre id="result">probe-pending</pre>
+<script>
+const f = document.getElementById('f');
+f.addEventListener('load', () => {
+  // wait for layout + image decode
+  setTimeout(() => {
+    let out;
+    try {
+      const doc = f.contentDocument;
+      const slides = Array.from(doc.querySelectorAll('.slide'));
+      out = slides.map((s, i) => {
+        const body = s.querySelector('.slide-body');
+        return {
+          idx: i + 1,
+          slide_scroll: s.scrollHeight,
+          slide_client: s.clientHeight,
+          slide_overflow: Math.max(0, s.scrollHeight - s.clientHeight),
+          body_scroll: body ? body.scrollHeight : 0,
+          body_client: body ? body.clientHeight : 0,
+          body_overflow: body ? Math.max(0, body.scrollHeight - body.clientHeight) : 0,
+          // capture the title for human-readable failure messages
+          title: (s.querySelector('.slide-title')?.textContent || '').trim().slice(0, 80)
+        };
+      });
+    } catch (e) {
+      out = { error: 'probe failed: ' + (e && e.message) };
+    }
+    document.title = 'PROBE_RESULT';
+    document.getElementById('result').textContent = JSON.stringify(out, null, 2);
+  }, 1800);
+});
+</script>
+</body></html>

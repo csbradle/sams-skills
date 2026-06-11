@@ -1,0 +1,16 @@
+{
+  "updated": "2026-06-09",
+  "classification": "retro",
+  "summary": "Added §0 'The skeleton is a shape, not the content (HARD)' — the rule that every skeleton/outline bullet must be expanded by deep source research, never reproduced literally. Reinforced in Purpose and §12. Offset by moving worked MD examples to references/pass1-checklist.md and adding trap #8.",
+  "scope": "edit + offset (references)",
+  "archived_to": null,
+  "files_created": [],
+  "files_modified": [
+    "C:/Users/SamBradley/.claude/skills/build-IC-Deck-context/SKILL.md",
+    "C:/Users/SamBradley/.claude/skills/build-IC-Deck-context/references/pass1-checklist.md"
+  ],
+  "memory_files_created": [],
+  "word_count": {"before": 2537, "after": 2702, "delta": 165, "target": 2000, "hard_limit": 5000},
+  "open_to_writes": ["updatebung", "emaildraft"],
+  "notes": "open_to_writes are PRE-EXISTING unresolved memory links flagged to-write before this update; this update added no new [[slug]] links. User scoped target to build-IC-Deck-context only (not draft-IC-Deck orchestrator)."
+}
