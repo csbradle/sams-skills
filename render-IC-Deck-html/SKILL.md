@@ -15,7 +15,7 @@ Build the 16:9 HTML deck from the context MD that Pass 1 produced. Pass 2's whol
 
 If spawned by the `/draft-IC-Deck` orchestrator, inputs arrive in the Agent prompt:
 - **Project slug** (e.g. `bungalow`, `wes`, `pak`) — required
-- **Anchors file path** (e.g. `C:/Users/SamBradley/.claude/skills/draft-IC-Deck/references/<project-slug>-anchors.md`) — or `none` if no anchors file exists
+- **Anchors file path** — REQUIRED (may be a `references/` pointer file; follow it to the data-side anchors file). `none` is no longer a legal value: the orchestrator's Phase A anchors gate guarantees one exists before this Pass spawns.
 - Context MD path (READ ONLY for content)
 - Prior deck HTML path (READ ONLY for structural reuse — NOT for content)
 - Output HTML path
@@ -34,7 +34,7 @@ If invoked standalone, read inputs from `<deal-folder>/<IC subfolder>/_ic_deck_s
 - Returns formula (if the deck has a returns page that quotes a standing model)
 - File naming convention for the HTML output (`<project display name> IC Update — <m.d> v<NN>.html`)
 
-If `anchors file: none` was passed, use the project-agnostic defaults (16:9 1920×1080, file name uses project slug from the input).
+If the anchors file is missing or unreadable, STOP and return to the orchestrator — `"ANCHORS GATE: anchors file missing/unreadable at <path>"` — exactly like build-IC-Deck-context does. Do NOT render with defaults; an unanchored render is the unguarded path Stage 1 deleted (see the 2026-06-10 incident entry in `draft-IC-Deck/references/v03-retro.md`).
 
 ## §1 — HARD READ CONSTRAINT
 

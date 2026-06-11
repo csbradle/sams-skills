@@ -1,6 +1,6 @@
 # Per-deal anchors file — template + bootstrap dialogue
 
-Every deal that builds IC artifacts MUST have an anchors file before any deck skill runs. **No anchors file (or required fields missing) → hard STOP + offer the bootstrap below.** The old "proceed without anchors, ask inline" path is dead — that is exactly how the 6.15 Lonestar deck shipped a mislabeled chart with no grounding (see `v03-retro.md` + the 2026-06-10 incident).
+Every deal that builds IC artifacts MUST have an anchors file before any deck skill runs. **No anchors file (or required fields missing) → hard STOP + offer the bootstrap below.** The old "proceed without anchors, ask inline" path is dead — that is exactly how the 6.15 Lonestar deck shipped a mislabeled chart with no grounding (see the "2026-06-10 — the Lonestar mislabel incident" entry in `v03-retro.md`).
 
 ## Where anchors files LIVE (data-side, never in the skill tree)
 
@@ -14,11 +14,11 @@ Anchors files contain deal data. Per the brain repo's rule #10 (deal data never 
 
 A deck build may proceed only when the anchors file has ALL of:
 1. `corpus_mode: folder | brain`
-2. Deal root path (folder mode) or vault project root (brain mode), and the path is **reachable on this machine** — if not, the named degraded mode applies (see verify-gate.md "Machine reachability")
+2. Deal root path (folder mode) or vault project root (brain mode), and the path is **reachable on this machine** — if not, the named degraded mode applies (see verify-gate.md "Machine-reachability preflight")
 3. ≥1 source-of-truth entry (workbook, or brain doc_id)
 4. People roster with ≥1 row that carries a real corpus `Source:` line
 
-A skeleton file that exists but misses any of these → the build runs in **degraded stamp** mode and the handoff says so plainly (e.g. "heads up: this deal's roster is empty, so I couldn't cross-check people/firms").
+**Missing any of the four REQUIRED fields above → hard STOP + bootstrap. No exceptions** (a skeleton that satisfies the letter of the fields but nothing else still passes — the gate is a floor, not a quality bar; the bootstrap corpus-sweep is what makes it useful). The **degraded stamp** applies only to the OPTIONAL sections (returns snapshot, conventions, last-artifact glob) being empty — the build proceeds but the handoff says so plainly (e.g. "heads up: this deal has no returns snapshot on file, so I couldn't sanity-check the returns page").
 
 ## Template (copy per deal, fill every section)
 

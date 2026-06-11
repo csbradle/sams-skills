@@ -30,7 +30,7 @@ If invoked standalone, read inputs from `<deal-folder>/<IC subfolder>/_ic_deck_s
 
 **Project-specific anchors (paths, people roster, source workbooks):** read the anchors file path passed in the Agent prompt (e.g. `C:/Users/SamBradley/.claude/skills/draft-IC-Deck/references/<project-slug>-anchors.md`). This is the canonical source for: deal folder structure, Slack canvas + channel IDs, advisor folder paths, source workbook names + tabs, verified people roster with firms + sources.
 
-**If the anchors file is missing, unreadable, or fails the required-fields check** (`anchors-template.md` in draft-IC-Deck/references/): STOP immediately and return to the orchestrator — `"ANCHORS GATE: <what's missing>. Run the bootstrap dialogue before re-spawning Pass 1."` Do NOT ask the user inline for source paths, do NOT assume any project's defaults, do NOT proceed with a partial sweep. (The old inline-ask path is how a deck once ran with no grounding at all — see the 2026-06-10 incident in `verify-gate.md`.) If the anchors file's corpus root is unreachable on this machine, return the same way with the machine-reachability note so the orchestrator can use verify-gate.md template T6.
+**If the anchors file is missing, unreadable, or fails the required-fields check** (`anchors-template.md` in draft-IC-Deck/references/): STOP immediately and return to the orchestrator — `"ANCHORS GATE: <what's missing>. Run the bootstrap dialogue before re-spawning Pass 1."` Do NOT ask the user inline for source paths, do NOT assume any project's defaults, do NOT proceed with a partial sweep. (The old inline-ask path is how a deck once ran with no grounding at all — see the "2026-06-10 — the Lonestar mislabel incident" entry in `draft-IC-Deck/references/v03-retro.md`.) If the anchors file's corpus root is unreachable on this machine, return the same way with the machine-reachability note so the orchestrator can use verify-gate.md template T6.
 
 **Project-agnostic references (apply to all projects):**
 - Audience-register filter: `C:/Users/SamBradley/.claude/skills/draft-IC-Deck/references/audience-register-filter.md`
@@ -58,7 +58,7 @@ Example failure mode: going to "Kevin Ortner + Chris Laurence notes by name" and
 
 Before touching any local Excel or transcript, get current state. All paths + IDs come from the project's anchors file — DO NOT hardcode any one project's values here:
 
-- **Slack canvas + channel** — read the deal's command-center canvas + last 5–10 days of channel for working context. Canvas ID + channel ID come from the project anchors file (or ask inline if no anchors file).
+- **Slack canvas + channel** — read the deal's command-center canvas + last 5–10 days of channel for working context. Canvas ID + channel ID come from the project anchors file (guaranteed present by the Phase A gate; if absent here, STOP per the Anchors section — never ask inline).
 - **Outlook last 5–10 days** — filter by deal-relevant participants (counterparties, advisors, counsel, deal team). Participant list comes from the project anchors file's people roster. Use Graph API directly via `GraphAdapter` per `[[feedback-use-graph-api-directly]]`. Multi-pass: `participants:<name>`, `"<topic phrase>"`, `from:<sender>`.
 - **Outlook calendar** — meetings in the next 30 days (DD sessions, mgmt calls, advisor calls).
 
@@ -68,7 +68,7 @@ If a stale local note disagrees with this-week's canvas + Outlook — **the canv
 
 For every financial output the deck shows, go to the **source Excel** the prior deck was rendered from. Not the rendered HTML. Not the prior deck PDF. Not a narrative summary.
 
-Pick the LATEST version on disk (`_v0`, `_v1`, ...) per `[[feedback-latest-artifact-version]]`. Source workbook list + canonical tab names come from the project anchors file. If no anchors file, ask the user inline which workbooks to read.
+Pick the LATEST version on disk (`_v0`, `_v1`, ...) per `[[feedback-latest-artifact-version]]`. Source workbook list + canonical tab names come from the project anchors file (guaranteed by the Phase A gate; if absent, STOP per the Anchors section — never ask inline).
 
 For each table that goes in the deck, write the actual numbers into the context MD with a `Source: <workbook>.xlsx / <tab>` line. So Pass 2 can drop the table in without re-reading the workbook.
 
@@ -117,7 +117,7 @@ To build the advisor list:
 2. For each person, check: have they actively engaged? (signed engagement letter, multiple recurring calls, explicit "yes I'll advise")
 3. Yes → advisor page. Declined or never confirmed → omit. Network/intro only → optionally a footnote, otherwise omit.
 
-The project anchors file's people roster has the verified active-advisor list — use it. If no anchors file, build the list inline from the advisor notes folder + confirm with the user.
+The project anchors file's people roster has the verified active-advisor list — use it. (The Phase A gate guarantees a roster with ≥1 sourced row exists; a thin roster means the bootstrap corpus-sweep should be re-run, not an inline rebuild here.)
 
 ### §8 — Tech / operations workflow scope (HARD)
 

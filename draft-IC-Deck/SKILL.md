@@ -56,7 +56,7 @@ Ask the user once, before any spawn:
 - **What IC artifact?** Interim update (framing-heavy, qualitative exec summ, DD status front-and-center) vs. final vote deck (DCM-pattern: punchline subtitle, table-heavy, paired opp + risk per slide). Different jobs.
 - **What date is on the deck cover?** ("5/25/2026 IC Update")
 - **What is the user-approved skeleton?** Bulleted slide list. If the user hasn't provided one, propose one based on the deck type + deal state, get sign-off. Don't invent slides the user didn't ask for.
-- **What's the deal folder + IC subfolder?** Pull from the project's anchors file if it exists; otherwise ask explicitly.
+- **What's the deal folder + IC subfolder?** Pull the deal folder from the anchors file (guaranteed present by the ANCHORS GATE above); ask only to confirm which IC subfolder this build targets.
 
 Surface load-bearing ambiguity now — don't guess scope. **Never assume the project is Bungalow** — Sam runs multiple deals (Bungalow, WES, Pak/Lonestar, future deals) and the same deck-build skill serves all of them.
 
@@ -73,7 +73,7 @@ Invoke the /build-IC-Deck-context skill against this deck.
 
 Deck spec (user-approved):
   project: <project-slug, e.g. bungalow | wes | pak | <other>>
-  anchors file: <absolute path to references/<project-slug>-anchors.md, OR "none — ask inline">
+  anchors file: <absolute path — REQUIRED; resolve the references/ pointer to the data-side file before spawning; "none" is never legal (Phase A gate guarantees this)>
   type: <update | vote>
   cover date: <m/d/yyyy>
   skeleton:
@@ -129,7 +129,7 @@ Invoke the /render-IC-Deck-html skill against this deck.
 
 Inputs:
   project: <project-slug>
-  anchors file: <absolute path to references/<project-slug>-anchors.md, OR "none">
+  anchors file: <absolute path — REQUIRED; resolved data-side file, never "none">
   context MD path: <path>/_ic_deck_context_<YYYY-MM-DD>.md  (READ THIS ONLY for content)
   prior deck HTML path: <path>/<prior version>.html         (for structural reuse only, NOT content)
   output HTML path: <path>/<project display name> IC Update — <m.d> v<NN>.html
@@ -157,8 +157,8 @@ The subagent reads ONLY the MD + prior deck HTML. It cannot see the source data 
 Every build runs this after Pass 2, every time. Stage-1 profile until the claims ledger ships (see verify-gate.md "Gate profiles").
 
 1. **Lint (deterministic, fail-closed):**
-   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/lint_deck.ps1 -DeckPath <deck.html> [-LedgerPath <ledger.json>] -UpdateHash`
-   Exit 1 → blocking findings; exit 2 → the check itself failed — the deck is NOT confirmed (tell the user plainly, offer retry). Gap-tags always block; orphan numbers flag-only at stage1; slop flag-only.
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Users\SamBradley\.claude\skills\draft-IC-Deck\scripts\lint_deck.ps1" -DeckPath <deck.html> [-LedgerPath <ledger.json>] -UpdateHash`
+   (Absolute script path — the working directory during a build is the deal folder.) Exit 1 → blocking findings; exit 2 → the check itself failed — the deck is NOT confirmed (tell the user plainly, offer retry). Gap-tags always block; orphan numbers flag-only at stage1; slop flag-only. `-UpdateHash` is safe to pass always: the baseline is only written when the deck PASSES. A hand-edit drift block stays blocked across re-runs; after the user waives it (T4), re-run once with `-AcceptDrift` to re-baseline — that is the only way to clear drift without fixing it, and it is logged. After editing the lint script, re-run `tests/run_lint_regression.ps1` (all 14 must pass).
 2. **Fact check:** spawn `/update-deck-verify` (fresh Agent context) against the deck + the context MD as truth source. Map the deck `cover date` → ISO `presentation_date` in the spawn prompt (verify hard-errors without it — never guess). Stage-1 strength is lexical; say so in the handoff with verify-gate.md template T7 (the "a right number with a wrong label would NOT have been caught" sentence). For decks >15 slides, batch per verify-gate.md once Stage 2 lands.
 3. **Gate + escalation:** route findings per the verify-gate.md decision table. Blocking findings auto-route to a fix re-spawn (max 2 loops); whatever remains is escalated to the user as a NUMBERED plain-English list using the T1–T8 templates — attestation ("it's my number") offered at every unsourced item, waivers accepted by number or description and logged per-finding. Vocabulary layer is hard: no internal nouns in anything the user sees.
 4. **Honest done language (never "verified"):** the handoff stamp follows verify-gate.md — "N numbers checked against source text (M shown as TBU, 0 unchecked). Checked as of <date>; email sync last ran <N> days ago." plus the corpus-boundary line (T8) when pipeline freshness is degraded, plus waiver list if any. Emit one progress line per check batch; state expected wall-clock up front.

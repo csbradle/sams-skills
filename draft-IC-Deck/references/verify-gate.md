@@ -65,6 +65,8 @@ Every full-profile handoff includes the **source table** (source-book appendix):
 **T6 — corpus unreachable on this machine:**
 > "I can't reach the <Deal> brain from this machine — it lives on the desktop. I can apply layout fixes and any numbers you give me, but I can't source-check; full checks next time you're on the desktop."
 
+**T7 — lexical-degradation stamp sentence:** lives in "Honest done language" above (the "a right number with a wrong label would NOT have been caught" sentence) — it is a stamp line, not a block template, but is numbered with this set because every caller references T1–T8 together.
+
 **T8 — corpus boundary (always printed with the stamp when pipeline freshness is degraded):**
 > "Checked against the deal corpus as of <date>; email sync last ran <N> days ago / the <folder> folder isn't being swept, so newer documents may exist that I haven't seen."
 

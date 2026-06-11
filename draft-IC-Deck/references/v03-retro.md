@@ -70,3 +70,15 @@ Open questions list included things the 5/15 mgmt call had answered (per-door re
 When a future Pass 1 or Pass 2 subagent is uncertain about whether a particular treatment is correct, the answer is often in here. Search for the failure-mode keyword (banker, ERP, attribution, rotation, quarterly, advisor, divider, callout) — the corresponding rule + the v03 evidence are documented above.
 
 When a NEW failure mode shows up in a future deck redline, append it here with a new section number, then add the corresponding rule to the right sub-skill SKILL.md. Keep the retro alive — it's the institutional memory for why each rule exists.
+
+## 2026-06-10 — the Lonestar mislabel incident (why the anchors gate, lint gate, and honest stamps exist)
+
+The `6.15 LoneStar IC_BuildSlides_v3` deck shipped a chart titled "Where expansion lives: Price & retention 63.5% / Upsell 21.8% / Cross-sell 14.7%" with a footnote citing the right source page (PakEnergy sellside CIM-style deck, p.15). All three numbers are real and on that page — but there they are the PRODUCT UTILIZATION mix (% of customers using 1 / 2 / 3+ products), not an expansion-revenue decomposition. Right numbers + right citation + wrong meaning. The deck also rendered literal `[needs source: …]` and `[Commentary TBU]` text next to confidently-labeled charts.
+
+How it got out: the deck ran "loose" — no anchors file (the skill family was Bungalow-hardwired), no context MD, no session state, and no verification pass exists in the build path. The only fact-check in the family (`update-deck-verify`) is lexical: it greps "does 63.5 appear in the corpus?" — it does — so this class of failure passes any lexical check by construction.
+
+Rules this incident created (Stage 1, 2026-06-11):
+- **Anchors gate** (anchors-template.md): no deck build without a field-complete, data-side anchors file. The "proceed without anchors / ask inline" paths were deleted everywhere.
+- **lint_deck.ps1 + Phase D2 / Step 8.5**: deterministic, fail-closed hygiene gate before any "done" — rendered gap-tags block in every profile.
+- **Honest stamps** (verify-gate.md): "checked", never "verified"; lexical-strength runs must say a right-number-wrong-label error would NOT have been caught.
+- The full fix for the meaning class itself (claims ledger, evidence-first rendering, batched meaning checks) is Stage 2 of the approved plan (`~/.claude/plans/synthetic-marinating-reddy.md`).

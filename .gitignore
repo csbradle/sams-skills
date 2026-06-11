@@ -1,0 +1,5 @@
+# runtime/session state and archives never sync
+*_state.json
+_archive/
+*.stage1.bak
+*.lastcheck.sha256
