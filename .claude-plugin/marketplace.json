@@ -15,6 +15,15 @@
       "author": {
         "name": "Sam Bradley"
       }
+    },
+    {
+      "name": "gs",
+      "source": "./plugins/gs",
+      "description": "Mobile-friendly gstack skills that run in cloud/mobile sessions: autoplan, review, ship, land-and-deploy. (Vendored copies — re-sync after gstack upgrades. Browser/QA/iOS gstack skills are excluded; they need a local runtime.)",
+      "category": "workflow",
+      "author": {
+        "name": "Sam Bradley"
+      }
     }
   ]
 }

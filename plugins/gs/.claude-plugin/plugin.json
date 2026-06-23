@@ -1,0 +1,8 @@
+{
+  "name": "gs",
+  "description": "Mobile-friendly gstack skills (vendored copies that run in cloud/mobile sessions): autoplan (planning), review (PR review), ship (tests + version + PR), land-and-deploy (merge, watch CI, canary). Excludes browser/QA/iOS skills that need a local runtime. Re-sync from gstack after upgrades.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sam Bradley"
+  }
+}
