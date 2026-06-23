@@ -1,0 +1,8 @@
+{
+  "name": "sam",
+  "description": "Sam's custom workflow skills: handoff, kickoff, ripit, clone, onboard-deal, founder-advisors, and the IC-deck pipeline (build-IC-Deck-context, draft-IC-Deck, render-IC-Deck-html, update-deck and variants).",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sam Bradley"
+  }
+}

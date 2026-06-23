@@ -2,6 +2,46 @@
 
 Custom [Claude Code](https://claude.ai/claude-code) skills for managing multi-project workflows. Built to solve the problem of losing context between sessions.
 
+This repo is a **Claude Code plugin marketplace**. The skills live here once, and any repo can pull them in — including **cloud and mobile sessions** (claude.ai/code), which never see your local `~/.claude/skills/`. No per-repo copying.
+
+## Install
+
+In any repo's `.claude/settings.json` (committed, so cloud/mobile sessions pick it up):
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "sams-skills": {
+      "source": { "source": "github", "repo": "csbradle/sams-skills" }
+    }
+  },
+  "enabledPlugins": {
+    "sam@sams-skills": true
+  }
+}
+```
+
+Or interactively in a terminal session:
+
+```
+/plugin marketplace add csbradle/sams-skills
+/plugin install sam@sams-skills
+```
+
+Plugin skills are namespaced under the plugin name `sam`, so you invoke them as
+`/sam:handoff`, `/sam:kickoff`, `/sam:ripit`, etc. Skills with auto-trigger
+descriptions (like handoff and kickoff) still activate automatically when relevant.
+
+## Structure
+
+```
+.claude-plugin/marketplace.json   ← marketplace catalog (one plugin: "sam")
+plugins/sam/
+  .claude-plugin/plugin.json       ← plugin manifest
+  skills/<skill-name>/SKILL.md      ← the skills
+global-rules/CLAUDE.md             ← shared global rules (not a skill)
+```
+
 ## Skills
 
 ### `/handoff` — End-of-Session Handoff

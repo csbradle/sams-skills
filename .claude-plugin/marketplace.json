@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "sams-skills",
+  "description": "Sam Bradley's custom Claude Code skills, packaged as a plugin so they load everywhere — including cloud and mobile sessions.",
+  "owner": {
+    "name": "Sam Bradley",
+    "email": "sam.bradley.715@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "sam",
+      "source": "./plugins/sam",
+      "description": "Custom workflow skills: handoff, kickoff, ripit, clone, onboard-deal, founder-advisors, and the IC-deck pipeline (build/draft/render/update).",
+      "category": "workflow",
+      "author": {
+        "name": "Sam Bradley"
+      }
+    }
+  ]
+}
