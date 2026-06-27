@@ -141,6 +141,29 @@ global-rules/CLAUDE.md             ← shared global rules (not a skill)
 
 ---
 
+### `/pindown` — Pin Down One To-Do's Product Taste
+
+**When to use:** Before planning, when a backlog item still has open product questions — "pin down `<todo>`", "nail down the spec for `<feature>`".
+
+**What it does:**
+1. Takes ONE backlog item and runs an adaptive, one-question-at-a-time interview
+2. Captures the WHAT and WHY (product taste) — never the HOW (no schema/endpoints/algorithms)
+3. Asks everything in plain, practical English (built for a non-technical founder; no tooling jargon ever shown to the user)
+4. Writes a durable, provenance-tagged spec section in `spec/<domain>.md` (every taste decision tagged `[USER]` with a date)
+5. On first run, bootstraps a one-time "ground rules" constitution (pre-filled from your vision doc if you have one) so cross-cutting taste is never re-asked per to-do
+6. Proves completion with a planner dry-run: spawns a sub-agent as a planner and only stamps `SPEC-COMPLETE` when it returns zero product questions
+
+**The problem it solves:** A planner stalls on "what should it actually do here?" taste questions. `/pindown` decides taste ONCE, up front, so the downstream planner never bounces a product question back to you.
+
+**Project-agnostic:** resolves the product name and user from the repo at runtime; works on any project, not a specific one.
+
+**Usage:**
+```
+/pindown <todo>
+```
+
+---
+
 ## Global Rules
 
 ### `progress.md` — Mandatory Session Tracking
