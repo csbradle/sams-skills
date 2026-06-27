@@ -10,7 +10,7 @@
     {
       "name": "sam",
       "source": "./plugins/sam",
-      "description": "Custom workflow skills: handoff, kickoff, ripit, clone, onboard-deal, founder-advisors, and the IC-deck pipeline (build/draft/render/update).",
+      "description": "Custom workflow skills: handoff, kickoff, ripit, clone, onboard-deal, founder-advisors, pindown, and the IC-deck pipeline (build/draft/render/update).",
       "category": "workflow",
       "author": {
         "name": "Sam Bradley"
