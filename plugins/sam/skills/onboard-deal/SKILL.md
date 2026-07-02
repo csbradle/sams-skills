@@ -1,142 +1,160 @@
 ---
 name: onboard-deal
-description: This skill should be used when the user asks to "onboard a deal", "/onboard-deal", "onboard UKI / Jedi / <deal> as a new project", "set up a new deal in the brain", "stand up a project from these files", or points at a group of deal files + an Outlook folder and wants the brain populated. Orchestrates a 5-phase per-deal onboarding for the TWC company brain — frames the deal via an interactive question round (parent context, gate 1), scaffolds Projects/<slug>/ from an authored CONTEXT_MASTER.md, ingests a pointed-to file group with per-file routing/meaning questions (subagent + gate 2), sweeps the deal's Outlook folder with important-conversation questions (subagent + gate 3), then lightly enriches People personas / opinions / decisions and rebuilds the index (subagent + spot-check). Reuses brain-kit CLIs (lonestar bootstrap/apply, ingest, graph backfill, file reclassify/accept); adds zero deal data to the committed skill.
-version: 1.0.0
+description: This skill should be used when the user asks to "onboard a deal", "/onboard-deal", "onboard <deal> as a new project", "set up a new deal in the brain", "catch up <deal>" / "finish onboarding <deal>" (half-onboarded or stale deals), "resume onboarding", "onboarding status for <deal>", or points at a group of deal files + an Outlook folder and wants the brain populated. v2 — ONE resumable command for brand-new deals AND catch-up of existing ones: 8 checkpointed stages spanning multiple sittings; entry status is machine-probed via `brain-kit project scorecard` (probes authoritative, state file a hint); resume grammar continue/jump/redo/skip/status; heavy stages (files, emails, enrich) run as fresh-context subagents; never reports "onboarded" unless Stage-8 live probes pass in-session. Zero deal data in committed files.
+version: 2.0.0
 user-invocable: true
 ---
 
-# /onboard-deal — Per-deal brain onboarding orchestrator
+# /onboard-deal v2 — probe-driven per-deal onboarding orchestrator
 
-## Purpose
+## How this works (read first)
 
-Stand up a new deal in the company brain end-to-end: scaffold the project, load a pointed-to file group, sweep the deal's Outlook folder, and lightly enrich the relational layer (People personas, deal opinions, decisions) — with **interactive question rounds** so the brain captures the context only the user knows (who's who, what each file is, which conversations matter).
+Desired-state reconciliation, Terraform-style: the target state is "a fully onboarded deal"
+(8 stages below); the ACTUAL state is measured by `brain-kit project scorecard <slug> --json`
+(machine probes over the vault + index — authoritative); the state file at
+`C:\brain\vault\Meta\onboarding\<slug>-state.json` holds interview answers + stage checkpoints
+(a hint, never trusted over probes). Every invoke: probe → reconcile → print an honest
+one-screen status → continue/jump/redo. A brand-new deal and a stale half-onboarded deal are
+the same flow — catch-up is just "probes say thin/missing → those stages run."
+Spec: `docs/design/samb-onboarding-skill-redesign-spec-2026-07-02.md`; plan (review record inside):
+`docs/design/samb-onboard-deal-v2-plan-2026-07-02.md` (both in the My Brain repo).
 
-The user runs this once per deal. The *process* is identical for every deal; only the *content* (the deal's files, folder, and answers) differs — that is the repeatability bar this skill is held to.
+## Version handshake
 
-## Operating principles
+- Requires **brain-kit ≥ 0.8.0** (`project scorecard`, `deal-update enroll/resolve-folder`,
+  `graph enroll-folder`, `file redistill/set-visibility`, `lonestar bootstrap --slug`).
+- argparse `invalid choice: 'scorecard'` is a KNOWN state, not a mystery: "brain-kit on this
+  machine predates the scorecard — `cd brain-kit && git pull && pip install -e .`, then re-invoke."
+- Scorecard JSON `schema_version` major > **1** → render every probe `unknown` + tell the user
+  this skill needs updating. Exit code 3 = same class (schema/version mismatch).
+- Run every `brain-kit` command with `PYTHONUTF8=1` (two cp1252 console-crash precedents).
 
-- **Ask freely — this is the sanctioned interview surface.** The brain's ≤3-questions/day cap governs the *autonomous nightly* pipeline. This skill is a **user-initiated deep onboarding**; the user explicitly wants to be asked. Batch questions sensibly, but don't ration them. (This is NOT a pivot violation — the nightly auto-infer stays capped.)
-- **LLM infers at write time; no TODO placeholders.** Every `sam_take` / `lens` / persona / opinion field gets filled from corpus + the user's answers + ~60s web research. Never write `sam_take: null` or "TODO: voice-dictate". (Per the 2026-05-12 inference pivot.)
-- **Existence-check before every create.** Before scaffolding a Person / Org / Decision / Opinion, look it up; if it exists, enrich it — never duplicate.
-- **Zero deal data in this skill.** The authored CONTEXT_MASTER.md and all deal specifics live in the local working dir / vault, never in these committed files (repo may go open-source — rule #10).
-- **Heavy phases run as fresh-context Agent subagents; gates stay in parent.** Keeps the parent context clean across a long run.
-- **Vault is not git-tracked.** Never `git add` vault content. Only the skill files are version-controlled (synced to the `sams-skills` repo).
+## Hard rules
 
-## Inputs to collect up front
+1. **Probes over prose.** Every status claim ("wired", "enriched", "onboarded") is a machine
+   probe printed verbatim — never LLM self-report. The words **"onboarded" / "ready" may only
+   appear after the Stage-8 live probes pass in the CURRENT session.** A skipped stage is a
+   named gap forever, never silence.
+2. **Zero deal data in these committed files.** CONTEXT_MASTER.md, state files, and all deal
+   specifics live in the local working dir / vault. Never `git add` vault content.
+3. **Ask freely, bundled.** This is the sanctioned interview surface (the ≤3/day cap governs
+   the nightly pipeline only) — but at most TWO themed bundles per framing round, and never
+   ask what a probe / the corpus / 60s of web research can answer (self-verify first).
+4. **Existence-check before every create; enrich, never duplicate. No TODO placeholders** —
+   infer `sam_take`/lens/persona fields at write time from corpus + answers + web.
+5. **Merge-not-replace on `Projects/<slug>/index.md` frontmatter**, diff shown before every
+   write. brain-kit ≥0.7.0 union-preserves non-bootstrap keys on re-apply (C1 fix), but the
+   skill still never regenerates a block it doesn't own.
+6. **LLM-$ and config writes are dry-run first**: `file redistill`, `xlsx ground`,
+   `set-visibility`, `deal-update enroll`, `graph enroll-folder` all default to dry-run —
+   show the count/cost/diff, get approval, then `--apply`.
+7. **Never call `brain-kit onboard`** — that is the colleague-seat setup tool, unrelated.
+8. **Plain English to the user** (rendering table below). Stage numbers, piece keys, and CLI
+   names are for this orchestrator and the state file; the user sees what each thing means.
+   Raw scorecard table available on request.
 
-1. **Deal name + codename** (e.g. "UKI" / "Jedi") → drives the project `slug`.
-2. **File-group path** — the folder/files the user is pointing at, and **where they came from** (data room? counsel? management?).
-3. **Outlook folder name** — the dedicated deal folder to sweep.
+## Entry protocol (EVERY invoke — status before questions)
 
-If any is missing, ask before starting. Resolve the vault path from `brain-kit` config (the live vault is `C:\brain\vault`).
+1. **Resolve the deal**: `PYTHONUTF8=1 brain-kit project scorecard <name-or-slug> --json`
+   (it alias-resolves and fuzzy-suggests). Exit 2 → print the env/config error + fix, stop.
+   Exit 3 / invalid-choice → version handshake above.
+2. **Cold start** (`"status": "new"`): no project exists. Present the candidate list (typo
+   guard); if genuinely new, propose a slug (lowercase, `[a-z0-9_-]`, ≥3 chars, not a
+   substring of another deal) and fold confirmation into the Stage-1 question bundle.
+3. **Legacy state migration** (one-time): glob the working dir for `_onboard_deal_state.json`.
+   If found: back it up, import its answer-of-record fields (file_group_dir, outlook_folder,
+   aliases, flagged_threads, sweep_days) into the v2 state file, rename the old file
+   `*.migrated`, and say so in the status line.
+4. **Load state** `C:\brain\vault\Meta\onboarding\<slug>-state.json` (create the dir if
+   missing; schema in `references/session-state-schema.md`). **Session guard**: if another
+   `session_id` marked a stage `in_progress` with `touched_at` < 2h ago, WARN and ask before
+   proceeding — never silently double-run.
+5. **Reconcile** (probes win):
+   | State says | Probes say | Verdict |
+   |---|---|---|
+   | done | ok | done |
+   | done | thin/missing/blocked | **downgraded** — offer `redo` |
+   | pending/absent | ok | `done (pre-existing)` — never re-run, never re-ask |
+   | skipped/deferred | anything | named deferral (render it; `accepted_gaps` render "accepted (user, date)") |
+   | anything | unknown | index stale or auth expired — run the probe's `fix` first |
+6. **Print the one-screen status** (plain-English rendering below) BEFORE asking anything.
+7. **Await the verb** (map the user's plain English onto it; record the verb in the state file):
+   - `continue` — next unfinished stage (default; "keep going", "resume", bare re-invoke)
+   - `jump stage-N` — go there; if prerequisites unmet, print the named dependency, don't fail mid-interview
+   - `redo stage-N` — invalidate that stage's checkpoint, re-probe, re-run ("redo the emails")
+   - `skip stage-N --reason "…"` — persistent named deferral ("skip the numbers for now")
+   - `status` — print the status screen and stop ("where are we on X?")
 
-## Resume protocol
+## The 8 stages
 
-Before anything, glob the working folder for `_onboard_deal_state.json`. If found: print `last_summary`, ask "Resume from phase `<phase>` or start fresh?" Resume → jump to the phase after the saved one. Fresh → archive (rename to `_onboard_deal_state.<timestamp>.json`) and proceed. Schema: `references/session-state-schema.md`. Write the state file after each phase completes.
+Full per-stage mechanics: `references/stage-playbooks.md` (read the relevant section before
+running a stage; heavy-stage subagents are pointed at it too).
 
----
+| # | Stage | Runs in | Gate check | Redo behavior |
+|---|---|---|---|---|
+| 1 | **Frame** — bundles → CONTEXT_MASTER → bootstrap `--slug` → apply → post-apply blocks (deal_type, milestones/timeline, cap-table pointer) → reindex → scheduler restart | parent | `scorecard --gate stage-1` + live `get_project(alias)` returns the 4-part status | safe-idempotent (re-apply union-preserves); re-asks only unanswered |
+| 2 | **Wire boards + ENROLL** — `deal_update:` + `outlook_folders:` blocks; `deal-update enroll` + `graph enroll-folder` (config enrolls — frontmatter alone goes silently stale); rebuild board; offer install-task | parent | `scorecard --gate stage-2` | safe-idempotent (set-semantics enroll) |
+| 3 | **File corpus** — drop-zone guard + `ingest plan` cost gate → subagent ingests (recent-first, LATEST versions only, never Archive/superseded) → parent routes + visibility sweep | **subagent: files** | files piece; zero UNEXPLAINED `personal` | resumes from processed-cursor; no re-billing |
+| 4 | **File metadata + XLS funnel** — `xlsx worklist` → folder-level grounding (`xlsx ground`) → residual per-file questions → `xlsx extract` key models → tag UW (`file set-doc-role` + `project mark-canonical-underwrite`) | **subagent: files** (gates in parent) | xlsx + underwrite pieces; exactly ONE live canonical UW; blocked = named re-drop list | safe-idempotent (ground is byte-identical re-stamp) |
+| 5 | **Financial scorecard** — interview + Nobie workbook read → author `financial_sources:` → loop `financial validate-map` to exit 0 → `capture` → full reindex | parent | financials piece; live `performance_vs_plan` returns real facts | re-asks the map; capture is conflict-aware |
+| 6 | **Email history** — `graph backfill --folder` dry-run → tally gate → live, 2–3 passes recent-first → important-thread questions → `sam_take`/lens backfill → `_inbox` re-route | **subagent: emails** (gates in parent) | emails piece + `index coverage` honest | resumes (window pull, message-id dedup, cursor untouched) |
+| 7 | **Enrichment + graph** — `file redistill` (dry-run cost → apply; IS the catch-up path); personas/opinions/Decisions/progress (existence-checked); `index rebuild --connectors-llm` + `connectors retry-pending` | **subagent: enrich** (spot-check in parent) | enrichment + entities pieces; graph edges reported as COUNTS + spot-check sample, never quality-green | redistill skips already-enriched unless `--all` |
+| 8 | **Verify** — reindex + **Claude Desktop restart** (MCP reads a sqlite snapshot) → live decision-usefulness probes → final scorecard → close out docs | parent | `scorecard --gate stage-8` + ALL live probes below | always safe |
 
-## Phase 0 — Frame the deal (parent context, question gate 1)
+**Stage-8 live probes (A1 — decision-usefulness, not retrieval checks):** `get_project(alias)`
+answers the 4-part deal status; "current thesis + top 3 risks, cited"; "what changed in the
+last 30 days"; `performance_vs_plan` returns real facts (or the financials deferral is named);
+`rank_project_files_for_question` returns the UW model for an underwriting question;
+`get_deal_update` returns a fresh board. A failing probe distinguishes "stale serve snapshot"
+(restart Desktop) from "data missing" (a real gap — name it).
 
-**Prep before asking (do the homework first):**
-- Read relevant memories (`project_<codename>*`, `org_*`, `feedback_research_new_entities`, `feedback_codename_alias_resolution`).
-- Check the vault for any existing footprint: `Organizations/<deal>.md`, prior mentions, an existing `Projects/<slug>/`.
-- ~60s web research on the deal target + each named party (type, focus, who they are).
-- Scan the file-group filenames + folder names for parties, dates, doc types.
+**Deal-type routing:** portco → all stages incl. 5 + monthly-financials contact question;
+buyside live → full set; sellside / watching → Stage 5 `n/a-by-type` (named, not a gap).
+A zero-corpus watching deal renders "0 files (none provided)" as n/a, not failure.
 
-**Then ask** (use `references/question-bank.md` as the checklist). Use structured `AskUserQuestion` for enumerable choices (which party is counterparty vs. advisor vs. our side; confirm the Outlook folder; confirm aliases), conversational asks for open-ended context (deal thesis, stage, the user's read on key people). Cover, at minimum:
-- **Parties & sides** — for each org: counterparty / advisor (whose?) / our side / portco. Which side of the deal.
-- **Key people + roles** — name, org, role, and the user's relationship/read.
-- **Codename + aliases** — every real-world name + codename the deal goes by (e.g. Jedi / UKI / Ultimate Knowledge / Cyberstar). **Load-bearing** — these become the project `aliases:` that auto-route files and email in Phases 2–3. Avoid aliases < 3 chars or substrings of other deals (substring matcher).
-- **Per-file-cluster meaning** — for each cluster of the pointed-to files: what is this, where did it come from, where does it belong.
+## Subagent protocol (T1: exactly these three)
 
-**Output:** author `<DEAL>-CONTEXT_MASTER.md` in the working dir (local, uncommitted) from research + answers, in the format `references/context-master-template.md` defines (which is exactly what `brain-kit lonestar bootstrap` parses). Show it to the user for redlines before Phase 1.
+Heavy stages spawn ONE fresh-context `general-purpose` Agent each — **files** (stages 3+4),
+**emails** (stage 6), **enrich** (stage 7). The prompt must include: the slug, the absolute
+path to this skill's `references/stage-playbooks.md` + which section to read, the answer-of-
+record fields it needs from the state file, and the instruction to **return structured
+results** (routed/unassigned doc_ids, tallies, blocked lists, question candidates) — subagents
+NEVER ask the user questions and NEVER write state; all gates + state writes stay in the
+parent. Subagent CLI runs also use `PYTHONUTF8=1`.
 
----
+## State discipline
 
-## Phase 1 — Scaffold the project (parent context, runs CLI)
+After each stage (and each gate decision): write the state file — per-stage
+`{status, completed_at, probe_summary}` where `probe_summary` is the FULL scorecard pieces
+JSON at completion time (so "why did stage 4 read done 3 weeks ago" is reconstructable),
+plus the answer-of-record fields and the verb log. Schema + field-by-field
+probe-rebuildable-vs-must-persist annotations: `references/session-state-schema.md`.
 
-`lonestar` is just the (legacy) command name — the parser/apply path is deal-generic. **Two gotchas the code forces you to handle:**
+## Plain-English rendering (status line for the user)
 
-**1. Set the slug — the bootstrap CLI hardcodes it to `lonestar`.** `run_bootstrap` does not read a slug from the MD; the emitted JSON always says `"project_slug": "lonestar"`. So bootstrap to a file, then patch the slug before apply:
+Bold one-line takeaway first ("**<Deal> is about 60% onboarded — files searchable, email
+history loaded; the numbers scorecard and live board aren't wired yet.**"), then one line per
+piece. Never say "Stage 6 thin" or piece keys; use the probe's counts:
 
-```
-brain-kit lonestar bootstrap <DEAL>-CONTEXT_MASTER.md > <slug>-bootstrap.json
-```
-Edit `<slug>-bootstrap.json` → set `project.project_slug` to the deal slug (e.g. `"uki"`). Then:
-```
-brain-kit lonestar apply <slug>-bootstrap.json --vault-path C:\brain\vault --dry-run
-```
+| Piece | ok reads | thin/missing/blocked reads |
+|---|---|---|
+| frame | "deal framed (aliases, type, timeline set)" | "set up but missing its timeline/deal-type — quick Stage-1 fix" |
+| files | "files loaded + searchable (N)" | "N files not yet searchable / N still marked private (list on request)" |
+| enrichment | "file summaries enriched (N of M)" | "only N of M files have real summaries — catch-up pass available (~$X)" |
+| xlsx | "spreadsheets readable (N of M)" | "N spreadsheets BLOCKED — need their source files re-dropped (list follows)" |
+| underwrite | "underwriting model pinned" | "N candidate underwriting models — needs one pick" |
+| financials | "budget-vs-actual scorecard wired" | "numbers scorecard not set up" / "deferred (user, date)" |
+| board | "live deal board refreshing every 3h" | "no live board — deal-status answers will go stale" |
+| mail_folders | "deal mail folder enrolled + swept" | "deal mail is NOT flowing in — new email won't reach the brain" |
+| emails | "email history loaded (N notes)" | "email history partial (N loaded) — finishes next sitting" |
+| graph_edges | "document links built (N edges — quality not asserted)" | "no document links yet" |
+| entities | "people + opinions filled" | "people/opinions thin" |
+| index | "search index fresh" | "search index STALE — status unknown until rebuild" |
 
-Show the dry-run diff. On approval, re-run without `--dry-run` (add `--yes` only if it prompts on migrating a pre-existing index).
+Every non-ok line ends with what fixes it (from the probe's `fix` field), in plain words.
 
-Result: `Projects/<slug>/` with `index.md`, `opinions.md`, and People/Org/Glossary stubs.
+## Completion
 
-**2. Add the project `aliases:` by hand — `apply` does NOT propagate them.** `_apply_project_index` writes only `slug` + `codename`; the routing-critical project-level aliases are dropped. After apply, edit `Projects/<slug>/index.md` frontmatter to add:
-```
-aliases: [<Real Deal Name>, <Codename>, <Other Names>]
-```
-These are **load-bearing**: file classification (Phase 2) and email routing + `get_project` alias-resolution (Phase 3) match the file path / title against `slug` / `codename` / `aliases`. Choose names that appear in the file-group folder names and likely email subjects. Avoid aliases < 3 chars or substrings of other deals (the matcher is case-insensitive substring). They take effect on the next `index rebuild` (Phase 4).
-
----
-
-## Phase 2 — Ingest the file group (Agent subagent + question gate 2)
-
-**Cost gate (parent):** `brain-kit ingest plan <file-group-dir>` → show the page count + estimated cost. Proceed on approval.
-
-**Spawn a `general-purpose` Agent subagent** to run the ingest (`brain-kit ingest <file...>` or a bash loop, vault from config). The subagent returns: which files auto-routed to `Projects/<slug>/file-pointers/`, and which landed in `_inbox/files/_unassigned/` (with their `doc_id` + routing candidates).
-
-**Back in parent — routing questions (gate 2):** for each unassigned / low-confidence file, ask the user where it belongs (offer the candidates). Then route:
-
-```
-brain-kit file reclassify <doc_id> --project <slug>
-brain-kit file accept <doc_id>
-```
-
-**Enrich:** for the deal's pointers, fill the `## Distillation` + lens from the user's per-file answers + corpus (no TODO slots). `.xlsx` stay pointer-only (no body) — flag that limitation, never fabricate a body.
-
----
-
-## Phase 3 — Sweep the Outlook folder (Agent subagent + question gate 3)
-
-**Spawn a subagent** to run, dry-run first:
-
-```
-brain-kit graph backfill --days <N> --folder "<UKI folder>" --dry-run
-```
-
-Show the kept/rejected tally. On approval, the subagent re-runs live (drop `--dry-run`). Notes write to `Projects/<slug>/emails/`. Do **2–3 passes** (`feedback_emails_slack_multiple_passes`): pass 1 sweeps, pass 2 checks downstream replies/threads, pass 3 spot-checks.
-
-**Back in parent — conversation questions (gate 3):** the email pipeline writes `sam_take: null` + TODO placeholders. Close that interactively:
-- Ask which threads are the **important conversations** and the user's read on key exchanges → backfill `sam_take` / `lens` richly on those notes.
-- Surface emails that landed in `_inbox` or low-confidence → ask where they belong, re-route.
-
----
-
-## Phase 4 — Light enrichment + index (Agent subagent + parent spot-check)
-
-**Spawn a subagent** to, from the file + email corpus + the user's answers:
-- Populate **People personas** (role, tone, relationship, history). **No unshareable content** — assume each person reads their own file (`feedback_persona_no_unshareable_content`): no promotion-advocacy, deal-performance judgments, or health.
-- Write **deal opinions** into `Projects/<slug>/opinions.md`.
-- Capture key **Decisions** (`Decisions/*.md`) surfaced by the corpus.
-- Existence-check every entity before creating.
-
-Then rebuild search:
-
-```
-brain-kit index rebuild
-```
-
-**Parent spot-check:** show the user a few enriched People + opinions + the project summary. Correct in-session (corrections update the entry same-turn).
-
----
-
-## Done criteria
-
-- `mcp__brain-kit__get_project("<slug>")` resolves (alias-aware).
-- File pointers live under `Projects/<slug>/file-pointers/` with real distillations.
-- Email notes under `Projects/<slug>/emails/` with backfilled `sam_take`/`lens` on flagged threads.
-- `mcp__brain-kit__rank_project_files_for_question("<slug>", <a real deal question>, concept_terms=[...])` returns the right pointers ranked.
-- People/opinions/decisions enriched; index rebuilt.
-
-After the run, update `docs/design/TODOS.md` (the UKI onboard backlog item) and `progress.md`, and save any corrections to memory.
+Stage 8 green → say what passed (probe by probe), update `docs/design/TODOS.md` (the deal's
+backlog anchors) + `progress.md`, save corrections to memory. If anything is deferred, the
+final line names it. Then — and only then — the deal may be called onboarded.

@@ -1,47 +1,84 @@
-# Onboarding question bank
+# Onboarding question bank (v2)
 
-The standard question set for `/onboard-deal`. Adapt to the deal; do the homework (memories + vault + ~60s web) *before* asking so questions are sharp, not generic. Batch them. Use structured `AskUserQuestion` for enumerable choices, conversational for open-ended.
+The Stage-1 interview surface. **Do the homework FIRST** (memories + vault footprint + ~60s
+web + filename scan) and present anything answerable as a pre-filled confirmation — never ask
+what a probe or the corpus can answer. **At most TWO themed bundles.** Use structured
+`AskUserQuestion` for enumerable choices, conversational asks for open-ended context.
+Generic, zero deal data — specifics come from the user at run time. On a CATCH-UP deal, skip
+every question whose answer already exists (state file answer-of-record, frontmatter, corpus)
+— confirm only what's missing or contradicted.
 
-Generic, zero deal data — deal specifics come from the user's answers at run time.
-
-## Gate 1 — Frame the deal (Phase 0)
+## Bundle 1 — Identity, parties, plumbing
 
 **Deal shape**
 - What is this deal, in a sentence? (thesis)
-- What stage is it at? (sourcing / diligence / IC / signed / closed / portco)
-- What's the structure? (buyout / growth / recap / merger / carve-out / financing)
-- What codename(s) and real-world name(s) does it go by? → **project aliases** (load-bearing for routing). Confirm each; flag any < 3 chars or that are substrings of other deals.
+- What stage? (sourcing / diligence / IC / signed / closed / portco)
+- What structure? (buyout / growth / recap / merger / carve-out / financing)
+- **Deal type** (drives which stages apply): buyside live / sellside / portco / watching.
+- Codename(s) + real-world name(s) → **aliases** (load-bearing for routing). Confirm each;
+  flag any <3 chars or substrings of other deals. Which are deal-UNIQUE (safe to route on)?
+- Proposed **slug** (new deals): confirm.
 
-**The parties** (for each org found in files/research — confirm side, don't assume):
-- Is <Org> the counterparty, an advisor (to whom?), our side, or a portco?
-- What's their role on the deal?
-- _(structured AskUserQuestion works well here — one question per org, options = the side categories)_
+**The parties** (per org found in files/research — confirm side, never assume):
+- Is <Org> the counterparty, an advisor (to whom?), our side, or a portco? Role on the deal?
+- (Structured AskUserQuestion: one question per org, options = the side categories.)
 
-**Key people** (for each person found):
-- Who is <Name> — org, role?
-- What's your relationship / read on them? (drives the persona; keep it shareable — assume they read their own file)
+**Key people** (per person found):
+- Who is <Name> — org, role? Your relationship/read? (drives the persona; keep it shareable —
+  assume they read their own file)
 
-**The file group**
-- Where did these files come from? (data room / counsel / management / banker)
-- For each cluster of files: what is this, and where does it belong? (which deal, which doc type)
+**Plumbing**
+- The exact **Outlook folder** name(s) for this deal (resolve-folder verifies IDs in Stage 2).
+- Where is the **file group** and where did it come from? (data room / counsel / management / banker)
+- How far back should the first email sweep go? (recent-first; deeper passes come later)
 
-**The inbox**
-- Confirm the exact Outlook folder name to sweep.
-- How far back should the sweep go? (days)
+## Bundle 2 — History, workstreams, numbers
 
-## Gate 2 — File routing (Phase 2)
+**Deal history / timeline** (→ `milestones:` + `## Deal timeline`)
+- Walk me through the dated events: platform close, tuck-ins, refis/recaps, rescue
+  financings, equity rounds — date, orgs + their roles, one line each.
+- Which document is the **authoritative cap table**? (recorded as pointer + one-line summary,
+  never a maintained ledger)
 
-For each file the path-classifier left in `_inbox/files/_unassigned/` or flagged low-confidence:
-- This file (`<title>`) didn't auto-route. Does it belong to <slug>, another deal, or is it a general reading? _(offer the classifier's candidates as options)_
-- _(For ambiguous ones, also ask what the doc is, to enrich its distillation.)_
+**Workstreams** (→ the deal board)
+- What are this deal's workstreams, in your words? (live deals often QoE / legal-SPA /
+  market work / lender / buyers-if-sellside; portco workstreams are bespoke)
 
-## Gate 3 — Important conversations (Phase 3)
+**The underwriting case** (EVERY deal — load-bearing for variance-vs-underwrite)
+- **Where is the underwriting case?** Which exact file/version is the IC-blessed pre-close
+  model (vs the budget, lender model, paper LBO, post-close VCP)?
+- → Stage 4 tags it `underwrite_case` + pins it canonical. Untagged = no baseline.
 
-After the email sweep:
-- Which of these threads are the conversations that actually matter? _(list the top threads by participant/subject)_
-- For each flagged thread: what's your read / what was really going on? → backfills `sam_take` + `lens` (no TODO placeholders).
+**The canonical cash source** (EVERY portco / held deal)
+- Is there a recurring management cash-flow / liquidity forecast — who sends it, to which
+  folder, on what cadence? (This is the canonical cash view — never a valuation memo's
+  forward rows.) → tagged `cash_flow_forecast`; sender/folder recorded per-deal.
+
+**Financial sources** (→ Stage 5 registration; skippable)
+- Where do the budget and recurring actuals live (file / sender / folder / cadence)? Which
+  tab is the summary P&L? (Stage 5 reads the workbook and builds the exact cell map with you.)
+
+## Stage-3 gate — file routing
+
+Per unassigned / low-confidence file: "`<title>` didn't auto-route — this deal, another deal,
+or general reading?" (offer the classifier's candidates). For ambiguous ones, also ask what
+the doc IS (enriches its distillation).
+
+## Stage-4 gate — folder grounding (Pass 1, one per source folder)
+
+"These N files came from `<folder>` — who produced them, what angle/incentive (seller / our
+side / lender / advisor), which phase of the deal?" Auto-fill from known folder/sender
+context; show assumptions; per-file questions only for Pass-2 residuals.
+
+## Stage-6 gate — important conversations
+
+- Which of these threads are the conversations that actually matter? (list top threads by
+  participant/subject from the sweep tally)
+- Per flagged thread: what's your read / what was really going on? → backfills `sam_take` +
+  `lens` richly (no TODO placeholders).
 - Any emails that landed in `_inbox` or under the wrong deal? Where do they belong?
 
-## Gate 4 — Enrichment spot-check (Phase 4)
+## Stage-7 gate — enrichment spot-check
 
-- Here's the persona I wrote for <Name> / the deal opinions / the project summary — anything wrong? _(corrections apply same-turn.)_
+"Here's the persona I wrote for <Name> / the deal opinions / the progress narrative — anything
+wrong?" (corrections apply same-turn and update inference rules per the correction loop)
