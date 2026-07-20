@@ -72,6 +72,8 @@ Pick the LATEST version on disk (`_v0`, `_v1`, ...) per `[[feedback-latest-artif
 
 For each table that goes in the deck, write the actual numbers into the context MD with a `Source: <workbook>.xlsx / <tab>` line. So Pass 2 can drop the table in without re-reading the workbook.
 
+**A live cell-for-cell Nobie read IS a verified read — that's why this section requires it.** If instead you take a spreadsheet figure from the BRAIN's retrieval (`rank_project_files_for_question` / `find_documents` / `get_file_pointer`), it is only trustworthy when that row's `extract_tier == "verified"`; a `headless_structural` / `pointer_only` / absent tier means the brain only skimmed the workbook and never verified the value. In that case open the source workbook live via Nobie (the verified read this section wants) or mark the figure TBU — never lift a skim-only figure into the MD as sourced. Full contract: `update-deck-verify/references/spreadsheet-source-tier-gate.md` (gate dark until brain-kit's go-live backfill; advisory before then).
+
 Apply `[[feedback-excel-formatting-preservation]]` if any workbook needs to be modified (copy_from_range to stamp styles before overwriting values).
 
 ### §4 — Read transcripts + advisor notes FULLY; close open questions against the LATEST mgmt transcript

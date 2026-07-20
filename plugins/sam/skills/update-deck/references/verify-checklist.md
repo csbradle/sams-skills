@@ -36,6 +36,7 @@ Every number, name, firm, date, quote, and decision in a slide must trace to a s
 
 - Hard rule: **never invent numbers**. Plausible placeholders quoted back is the failure mode. [[feedback-never-fabricate-ic-numbers]].
 - For each numeric claim added or edited in this revision: confirm the value appears in the context MD or in a corpus file with the source cited next to it.
+- **Spreadsheet-source tier gate.** Finding a number in the corpus is necessary but NOT sufficient if its only source is a spreadsheet the brain merely *skimmed*. Every brain-kit retrieval row carries `extract_tier`; a spreadsheet-sourced figure is quotable only when its source is `extract_tier == "verified"`. `headless_structural` / `pointer_only` / absent-tier-on-an-xlsx = an unverified skim → treat as unsourced (TBU, or `brain-kit xlsx enrich <doc_id>` to promote it to `verified`, then re-verify). Fail safe on absent tier. **Currently DARK** (advisory-only) until brain-kit's go-live backfill classifies the corpus — full contract + activation state: `update-deck-verify/references/spreadsheet-source-tier-gate.md`. [[feedback-never-fabricate-ic-numbers]].
 - If a number can't be sourced: replace with a TBU box pointing to the source file. Example:
   ```html
   <div class="tbu">
@@ -123,6 +124,7 @@ After overflow probe passes, screenshot every slide via headless Chrome `--scree
 | P&L / table bottom has `Check` row or empty row-label stubs | Tighten export range per playbook Defect 4 |
 | Naked output (no commentary) | Either add corpus-sourced commentary or remove the slide |
 | Unsourced number | Replace with TBU box; ask user for source |
+| Number sourced only to a skim-only spreadsheet (`extract_tier` ≠ `verified`) | TBU box, OR `brain-kit xlsx enrich <doc_id>` to promote source to `verified` then re-verify (gate dark until go-live backfill) |
 | Unsourced person/firm | Ask user; do not infer |
 | Unsourced quote | Drop the quote or re-pull from transcript |
 | Internal-audience language | Strip per audience-register-filter |
@@ -140,6 +142,7 @@ All three pillars green:
 - [ ] Every image re-Read post-fix; text legible at chat-display size.
 - [ ] Every embedded output has adjacent commentary block.
 - [ ] Every number/name/quote in the revised slides traces to a corpus line.
+- [ ] Every spreadsheet-sourced number's source is `extract_tier == "verified"` (or flagged; gate dark until go-live backfill).
 - [ ] Audience-register filter run; no internal-tracker language present.
 - [ ] Tone is even-keel; no salesy adjectives in any revised slide.
 - [ ] Spoon-feed rule applied; no caveats reference stats the IC hasn't seen.

@@ -36,6 +36,9 @@ This skill is read-only. It does NOT edit the deck. Fixing is `/update-deck-fix`
   "unsourced_quotes": [
     { "slide": 6, "claim": "\"40% of PM ops\"", "source_found": "Kevin Ortner 5/11 transcript line 137" }
   ],
+  "unverified_spreadsheet_sources": [
+    { "slide": 11, "claim": "CY26E Adj. EBITDA $34.7M", "source_doc_id": "71342cb8", "extract_tier": "headless_structural", "advisory": true, "suggested_fix": "not a verified cell read — TBU, or `brain-kit xlsx enrich 71342cb8` then re-verify" }
+  ],
   "unsourced_workstreams": [
     { "slide": 8, "claim": "Industry Advisor", "corpus_says_canonical": ["Market diligence", "Tech DD", "Commercial DD"], "suggested_fix": "rename to canonical workstream or drop" }
   ],
@@ -64,7 +67,10 @@ This skill is read-only. It does NOT edit the deck. Fixing is `/update-deck-fix`
 }
 ```
 
-`pass` is true only when every array above is empty.
+`pass` is true only when every array above is empty — EXCEPT that
+`unverified_spreadsheet_sources` entries marked `"advisory": true` (the tier gate
+is dark until brain-kit's go-live backfill, see Step 3e) do NOT block pass. A
+non-advisory `unverified_spreadsheet_sources` entry does.
 
 ## Procedure
 
@@ -105,7 +111,7 @@ If `changed_slides` is set, walk those slides first and tag any claim added in t
 
 For each claim:
 
-1. **Numbers** — grep the context MD / corpus for the literal number (or a tight variant). Match required. If not found, add to `unsourced_numbers`. Memory rule: [[feedback-never-fabricate-ic-numbers]].
+1. **Numbers** — grep the context MD / corpus for the literal number (or a tight variant). Match required. If not found, add to `unsourced_numbers`. Memory rule: [[feedback-never-fabricate-ic-numbers]]. **Then apply the spreadsheet-source tier gate (Step 3e):** finding the number in the corpus is necessary but NOT sufficient if the only source is a skim-only spreadsheet.
 2. **People + firms** — grep the corpus for the person's name, confirm the firm matches what the slide says. Verified roster lives at [[project-bungalow-people-roster]] for Bungalow. If the deck names a firm the corpus doesn't, add to `unsourced_people` with `corpus_says` set if there's a different firm in the corpus. Memory rule: [[feedback-no-hallucination-ask-instead]] — NEVER infer a firm from a domain or training data.
 3. **Quotes** — grep the corpus for a substring of the quote. If found, capture the source line for the report. If not found verbatim, add to `unsourced_quotes`.
 4. **Outputs** — for each `<img>`/`<table>`, check whether the same `.slide` contains a `<ul>`, `<callout>`, or `<p>` of commentary. If not, add to `naked_outputs`. Memory rule: [[feedback-no-naked-outputs-in-ic]].
@@ -135,6 +141,38 @@ For every relative-date phrase in a revised slide ("this week", "next week", "ye
 3. **Rewrite from IC's seat** — emit the corrected phrase in `tense_reconciliations[]` with `{ slide, original, anchor_event, offset, corrected }`.
 
 Memory rule: [[feedback-presentation-date-tense-check]]. Example: Friday transcript "on site next week" + Monday presentation → "on site last week" (the trip is now in the IC's past).
+
+### Step 3e — Spreadsheet-source tier gate
+
+A number can trace to the corpus and STILL be unverified — if its only source is
+a spreadsheet the brain merely *skimmed* (openpyxl structural scan) rather than
+*read* (live-Nobie / deterministic cell read). A skim makes a workbook findable
+but never verifies its cell values. Full contract + activation state:
+`references/spreadsheet-source-tier-gate.md`.
+
+For every numeric claim whose backing source (from Step 3.1) is a **spreadsheet**
+(`.xlsx` / `file_type == "xlsx"`):
+
+1. Read the source doc's `extract_tier` — it rides on EVERY brain-kit retrieval
+   row (`find_documents`, `get_file_pointer`, `rank_project_files_for_question`,
+   `rank_related_files_for_question`, `get_related_files`). If you have a doc_id
+   but not the tier, call `get_file_pointer(doc_id)`.
+2. `verified` → quotable, done. `headless_structural` / `pointer_only` /
+   absent-tier-on-an-xlsx → **NOT a verified cell read** → add to
+   `unverified_spreadsheet_sources[]` with `source_doc_id`, `extract_tier`, and a
+   `suggested_fix` (TBU box, or `brain-kit xlsx enrich <doc_id>` to promote the
+   source to `verified`, then re-verify). Fail SAFE on absent tier — refuse,
+   never quote.
+3. **ACTIVATION GATE (currently DARK):** while `GATE_ACTIVE = false` in the
+   reference, mark each entry `"advisory": true` — report it but do NOT fail the
+   figure on tier alone (before the brain-kit go-live backfill, readable
+   spreadsheets still read as `pointer_only`, so enforcing now = false
+   positives). A non-advisory entry is a hard fail; an advisory one is not. Flip
+   `GATE_ACTIVE = true` (drop `advisory`) after brain-kit's go-live reindex +
+   `xlsx extract --all-stale` backfill verify complete.
+
+Memory rule: [[feedback-never-fabricate-ic-numbers]] (a skim-only figure is a
+fabrication risk, not a source).
 
 ### Step 4 — Build the gap report
 
@@ -168,6 +206,7 @@ These are the failure modes this skill is designed to catch. Be paranoid about e
 
 ## References
 
+- `references/spreadsheet-source-tier-gate.md` — the cross-repo `extract_tier` contract + activation gate (Step 3e).
 - `~/.claude/skills/update-deck/references/verify-checklist.md` — Pillar 2 (sourcing) definition.
 - `~/.claude/skills/draft-IC-Deck/references/audience-register-filter.md` — internal-register patterns.
 
