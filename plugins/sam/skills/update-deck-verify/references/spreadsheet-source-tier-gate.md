@@ -46,7 +46,7 @@ tier is on the row. If you somehow have a doc_id but not the tier, call
 
 ## ACTIVATION GATE — this check is DARK until the go-live reindex verifies
 
-**Current state: `GATE_ACTIVE = false` (dark).**
+**Current state: `GATE_ACTIVE = true` (LIVE as of 2026-07-20).** Go-live backfill + full reindex verified: the corpus is tier-classified (568 `headless_structural` / 122 `pointer_only` / 2 `verified`), so enforcement no longer produces false positives from unclassified readable files.
 
 Rationale (from the plan's release order): the tier only becomes trustworthy
 corpus-wide *after* brain-kit runs the go-live `index rebuild --full` (schema
@@ -87,8 +87,9 @@ get_file_pointer("71342cb8…") → { ..., "extract_tier": "headless_structural"
     "suggested_fix": "not a verified cell read — replace with TBU, OR run `brain-kit xlsx enrich 71342cb8` (live Nobie read) to promote the source to verified, then re-verify" }
   ```
   `pass` cannot be true while this entry is non-advisory.
-- **GATE_ACTIVE = false (today):** same entry but `"advisory": true` — reported,
-  not failed.
+- **GATE_ACTIVE = false (historical dark mode, pre-2026-07-20):** same entry but
+  `"advisory": true` — reported, not failed. Retained for reference; no longer the
+  active mode.
 
 ## How to promote a source to `verified` (so a real figure can ship)
 
